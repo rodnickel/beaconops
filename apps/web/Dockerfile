@@ -5,20 +5,22 @@ WORKDIR /app
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Copy package files
-COPY package.json pnpm-lock.yaml* ./
+# Copy package files from monorepo root
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/web/package.json ./apps/web/
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile || pnpm install
+RUN pnpm install --filter=web...
 
-# Copy source code
-COPY . .
+# Copy web source code
+COPY apps/web ./apps/web/
 
 # Build argument for API URL
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 # Build
+WORKDIR /app/apps/web
 RUN pnpm build
 
 # Production stage
@@ -28,13 +30,12 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
 # Copy built files
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
+COPY --from=builder /app/apps/web/.next/standalone ./
+COPY --from=builder /app/apps/web/.next/static ./.next/static
+# Copy public folder if exists
+RUN mkdir -p ./public
+COPY --from=builder /app/apps/web/public/ ./public/
 
 EXPOSE 3000
 

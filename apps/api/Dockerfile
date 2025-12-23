@@ -5,18 +5,21 @@ WORKDIR /app
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Copy package files
-COPY package.json pnpm-lock.yaml* ./
-COPY prisma ./prisma/
+# Copy package files from monorepo root
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json ./apps/api/
+COPY apps/api/prisma ./apps/api/prisma/
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile || pnpm install
+WORKDIR /app/apps/api
+RUN cd /app && pnpm install --filter=api...
 
 # Generate Prisma client
 RUN pnpm prisma generate
 
-# Copy source code
-COPY . .
+# Copy API source code
+COPY apps/api/src ./src/
+COPY apps/api/tsconfig.json ./
 
 # Build
 RUN pnpm build
