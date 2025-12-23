@@ -1,0 +1,158 @@
+// Prisma Schema para a Plataforma de Monitoramento
+// Documentação: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// MODELO: User (Usuário do sistema)
+// ============================================
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  monitors      Monitor[]
+  alertChannels AlertChannel[]
+
+  @@map("users")
+}
+
+// ============================================
+// MODELO: Monitor (Serviço/URL a ser monitorado)
+// ============================================
+model Monitor {
+  id              String   @id @default(cuid())
+  name            String
+  url             String
+  method          String   @default("GET")
+  intervalSeconds Int      @default(300) @map("interval_seconds") // 5 minutos padrão
+  timeout         Int      @default(30) // segundos
+  expectedStatus  Int      @default(200) @map("expected_status")
+  checkSsl        Boolean  @default(true) @map("check_ssl")
+  active          Boolean  @default(true)
+  alertsEnabled   Boolean  @default(true) @map("alerts_enabled") // Envia alertas quando status muda
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relacionamento com User
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relacionamentos
+  checks Check[]
+  alerts Alert[]
+
+  @@index([userId])
+  @@index([active])
+  @@map("monitors")
+}
+
+// ============================================
+// MODELO: Check (Resultado de uma verificação)
+// ============================================
+model Check {
+  id         String   @id @default(cuid())
+  status     String // "up" | "down" | "degraded"
+  statusCode Int?     @map("status_code")
+  latency    Int? // em milissegundos
+  error      String?
+  checkedAt  DateTime @default(now()) @map("checked_at")
+
+  // Relacionamento com Monitor
+  monitorId String  @map("monitor_id")
+  monitor   Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+
+  @@index([monitorId, checkedAt])
+  @@map("checks")
+}
+
+// ============================================
+// MODELO: AlertChannel (Canal de notificação)
+// ============================================
+model AlertChannel {
+  id        String   @id @default(cuid())
+  type      String // "email" | "webhook" | "slack"
+  name      String
+  config    Json // { email: "..." } ou { webhookUrl: "..." }
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relacionamento com User
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relacionamentos
+  alerts Alert[]
+
+  @@index([userId])
+  @@map("alert_channels")
+}
+
+// ============================================
+// MODELO: Alert (Alerta enviado)
+// ============================================
+model Alert {
+  id      String   @id @default(cuid())
+  type    String // "down" | "up" | "degraded"
+  message String
+  sentAt  DateTime @default(now()) @map("sent_at")
+
+  // Relacionamento com Monitor
+  monitorId String  @map("monitor_id")
+  monitor   Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+
+  // Relacionamento com AlertChannel
+  alertChannelId String       @map("alert_channel_id")
+  alertChannel   AlertChannel @relation(fields: [alertChannelId], references: [id], onDelete: Cascade)
+
+  @@index([monitorId, sentAt])
+  @@map("alerts")
+}
+
+// ============================================
+// MODELO: Incident (Incidente - Fase 3)
+// ============================================
+model Incident {
+  id         String    @id @default(cuid())
+  title      String
+  status     String // "investigating" | "identified" | "monitoring" | "resolved"
+  severity   String // "minor" | "major" | "critical"
+  startedAt  DateTime  @default(now()) @map("started_at")
+  resolvedAt DateTime? @map("resolved_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  updates IncidentUpdate[]
+
+  @@map("incidents")
+}
+
+// ============================================
+// MODELO: IncidentUpdate (Atualização de incidente)
+// ============================================
+model IncidentUpdate {
+  id        String   @id @default(cuid())
+  message   String
+  status    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relacionamento com Incident
+  incidentId String   @map("incident_id")
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId])
+  @@map("incident_updates")
+}

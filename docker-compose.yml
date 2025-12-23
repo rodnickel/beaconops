@@ -1,0 +1,45 @@
+# ============================================
+# Docker Compose - Ambiente de Desenvolvimento
+# Inicia PostgreSQL e Redis para desenvolvimento local
+# ============================================
+
+services:
+  # PostgreSQL - Banco de dados principal
+  postgres:
+    image: postgres:16-alpine
+    container_name: observabilidade-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: observabilidade
+      POSTGRES_HOST_AUTH_METHOD: md5
+      POSTGRES_INITDB_ARGS: "--auth-host=md5"
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis - Cache e filas
+  redis:
+    image: redis:7-alpine
+    container_name: observabilidade-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:

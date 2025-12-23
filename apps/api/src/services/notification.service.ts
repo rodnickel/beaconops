@@ -1,0 +1,207 @@
+import { Resend } from 'resend'
+import { env } from '../config/env.js'
+import type { EmailConfig, WebhookConfig, SlackConfig } from '../modules/alerts/alerts.schema.js'
+
+// ============================================
+// Serviço de Notificações
+// ============================================
+
+// Resend só é inicializado se a API key estiver configurada
+const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null
+
+interface NotificationPayload {
+  monitorName: string
+  monitorUrl: string
+  status: 'up' | 'down' | 'degraded'
+  message: string
+  checkedAt: Date
+  latency?: number
+}
+
+// Envia email via Resend
+export async function sendEmailNotification(
+  config: EmailConfig,
+  payload: NotificationPayload
+): Promise<boolean> {
+  const statusEmoji = payload.status === 'up' ? '✅' : payload.status === 'down' ? '🔴' : '⚠️'
+  const statusText = payload.status === 'up' ? 'Online' : payload.status === 'down' ? 'Offline' : 'Degradado'
+
+  if (!resend) {
+    console.warn('⚠️ RESEND_API_KEY não configurada, email não enviado')
+    return false
+  }
+
+  try {
+    await resend.emails.send({
+      from: env.EMAIL_FROM,
+      to: config.email,
+      subject: `${statusEmoji} [${statusText}] ${payload.monitorName}`,
+      html: `
+        <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: ${payload.status === 'up' ? '#10b981' : payload.status === 'down' ? '#ef4444' : '#f59e0b'};">
+            ${statusEmoji} Monitor ${statusText}
+          </h2>
+
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <tr>
+              <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Monitor</td>
+              <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; font-weight: 500;">${payload.monitorName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">URL</td>
+              <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">
+                <a href="${payload.monitorUrl}" style="color: #3b82f6;">${payload.monitorUrl}</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Status</td>
+              <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; font-weight: 500;">${statusText}</td>
+            </tr>
+            ${payload.latency ? `
+            <tr>
+              <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Latência</td>
+              <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${payload.latency}ms</td>
+            </tr>
+            ` : ''}
+            <tr>
+              <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Verificado em</td>
+              <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${payload.checkedAt.toLocaleString('pt-BR')}</td>
+            </tr>
+            ${payload.message ? `
+            <tr>
+              <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Mensagem</td>
+              <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${payload.message}</td>
+            </tr>
+            ` : ''}
+          </table>
+
+          <p style="color: #9ca3af; font-size: 12px; margin-top: 30px;">
+            Enviado por Observabilidade IT
+          </p>
+        </div>
+      `,
+    })
+
+    console.log(`📧 Email enviado para ${config.email}`)
+    return true
+  } catch (error) {
+    console.error('Erro ao enviar email:', error)
+    return false
+  }
+}
+
+// Envia webhook
+export async function sendWebhookNotification(
+  config: WebhookConfig,
+  payload: NotificationPayload
+): Promise<boolean> {
+  try {
+    const body = JSON.stringify({
+      monitor: {
+        name: payload.monitorName,
+        url: payload.monitorUrl,
+      },
+      status: payload.status,
+      message: payload.message,
+      latency: payload.latency,
+      checkedAt: payload.checkedAt.toISOString(),
+    })
+
+    const response = await fetch(config.url, {
+      method: config.method || 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...config.headers,
+      },
+      body: config.method === 'GET' ? undefined : body,
+    })
+
+    if (!response.ok) {
+      console.error(`Webhook retornou status ${response.status}`)
+      return false
+    }
+
+    console.log(`🔗 Webhook enviado para ${config.url}`)
+    return true
+  } catch (error) {
+    console.error('Erro ao enviar webhook:', error)
+    return false
+  }
+}
+
+// Envia para Slack
+export async function sendSlackNotification(
+  config: SlackConfig,
+  payload: NotificationPayload
+): Promise<boolean> {
+  const statusEmoji = payload.status === 'up' ? ':white_check_mark:' : payload.status === 'down' ? ':red_circle:' : ':warning:'
+  const statusText = payload.status === 'up' ? 'Online' : payload.status === 'down' ? 'Offline' : 'Degradado'
+  const color = payload.status === 'up' ? '#10b981' : payload.status === 'down' ? '#ef4444' : '#f59e0b'
+
+  try {
+    const response = await fetch(config.webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        channel: config.channel,
+        attachments: [
+          {
+            color,
+            title: `${statusEmoji} ${payload.monitorName} está ${statusText}`,
+            title_link: payload.monitorUrl,
+            fields: [
+              {
+                title: 'URL',
+                value: payload.monitorUrl,
+                short: true,
+              },
+              {
+                title: 'Status',
+                value: statusText,
+                short: true,
+              },
+              ...(payload.latency
+                ? [{ title: 'Latência', value: `${payload.latency}ms`, short: true }]
+                : []),
+              ...(payload.message
+                ? [{ title: 'Mensagem', value: payload.message, short: false }]
+                : []),
+            ],
+            footer: 'Observabilidade IT',
+            ts: Math.floor(payload.checkedAt.getTime() / 1000),
+          },
+        ],
+      }),
+    })
+
+    if (!response.ok) {
+      console.error(`Slack retornou status ${response.status}`)
+      return false
+    }
+
+    console.log(`💬 Slack enviado`)
+    return true
+  } catch (error) {
+    console.error('Erro ao enviar Slack:', error)
+    return false
+  }
+}
+
+// Envia notificação baseado no tipo do canal
+export async function sendNotification(
+  channelType: 'email' | 'webhook' | 'slack',
+  config: EmailConfig | WebhookConfig | SlackConfig,
+  payload: NotificationPayload
+): Promise<boolean> {
+  switch (channelType) {
+    case 'email':
+      return sendEmailNotification(config as EmailConfig, payload)
+    case 'webhook':
+      return sendWebhookNotification(config as WebhookConfig, payload)
+    case 'slack':
+      return sendSlackNotification(config as SlackConfig, payload)
+    default:
+      console.error(`Tipo de canal desconhecido: ${channelType}`)
+      return false
+  }
+}
