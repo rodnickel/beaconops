@@ -1,0 +1,7 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- B minimalista com sinal wifi/beacon acima -->
+  <path d="M20 20 Q32 8 44 20" stroke="#10B981" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M26 26 Q32 18 38 26" stroke="#10B981" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <circle cx="32" cy="32" r="3" fill="#10B981"/>
+  <text x="32" y="56" font-family="Inter, system-ui, sans-serif" font-size="24" font-weight="700" fill="#10B981" text-anchor="middle">B</text>
+</svg>

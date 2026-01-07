@@ -42,3 +42,9 @@ coverage
 *.tsbuildinfo
 *.swp
 *.swo
+
+# Credentials (NEVER commit)
+CREDENCIAIS*.txt
+*-credentials.txt
+*-secrets.txt
+beaconops-stack.yml

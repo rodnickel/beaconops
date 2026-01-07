@@ -1,0 +1,6 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- B com arco de localização/beacon pin -->
+  <path d="M32 58 L32 48" stroke="#10B981" stroke-width="3" stroke-linecap="round"/>
+  <path d="M16 36 Q16 16 32 16 Q48 16 48 36 Q48 48 32 48 Q16 48 16 36" fill="#10B981"/>
+  <text x="32" y="40" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="700" fill="#ffffff" text-anchor="middle">B</text>
+</svg>

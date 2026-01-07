@@ -200,11 +200,11 @@ export default function EditMonitorPage({ params }: { params: Promise<{ id: stri
                 type="number"
                 value={intervalSeconds}
                 onChange={(e) => setIntervalSeconds(Number(e.target.value))}
-                min={60}
+                min={5}
                 max={3600}
                 className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
               />
-              <p className="text-xs text-zinc-500 mt-1">Mín: 60s, Máx: 3600s</p>
+              <p className="text-xs text-zinc-500 mt-1">Mín: 5s, Máx: 3600s</p>
             </div>
 
             <div>

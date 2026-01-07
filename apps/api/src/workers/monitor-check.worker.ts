@@ -1,7 +1,7 @@
 import { Worker, Queue } from 'bullmq'
 import { redis } from '../lib/redis.js'
 import { prisma } from '../lib/prisma.js'
-import { findActiveChannelsByUserId, createAlert } from '../modules/alerts/alerts.service.js'
+import { findActiveChannelsByTeamId, createAlert } from '../modules/alerts/alerts.service.js'
 import { sendNotification } from '../services/notification.service.js'
 
 // ============================================
@@ -47,7 +47,7 @@ async function performCheck(
       method,
       signal: controller.signal,
       headers: {
-        'User-Agent': 'ObservabilidadeIT-Monitor/1.0',
+        'User-Agent': 'BeaconOps-Monitor/1.0',
       },
     })
 
@@ -129,6 +129,8 @@ async function processMonitorCheck(monitorId: string) {
   // Verifica se precisa disparar alerta (status mudou)
   const previousStatus = monitor.currentStatus
   const statusChanged = previousStatus !== null && previousStatus !== result.status
+  // Também dispara alerta se é a primeira verificação e status é down
+  const isFirstCheckDown = previousStatus === null && result.status === 'down'
 
   // Atualiza o status atual do monitor
   await prisma.monitor.update({
@@ -141,60 +143,57 @@ async function processMonitorCheck(monitorId: string) {
   })
 
   // Se o status mudou e alertas estão habilitados, dispara alertas
-  if (statusChanged && monitor.alertsEnabled) {
-    console.log(`🔔 Status mudou: ${previousStatus} → ${result.status} para ${monitor.name}`)
-    await triggerAlerts(monitor, previousStatus as string, result.status, result.error)
-  } else if (statusChanged && !monitor.alertsEnabled) {
+  if ((statusChanged || isFirstCheckDown) && monitor.alertsEnabled) {
+    console.log(`🔔 Status mudou: ${previousStatus ?? 'unknown'} → ${result.status} para ${monitor.name}`)
+    await triggerAlerts(monitor, previousStatus ?? 'unknown', result.status, result.error)
+  } else if ((statusChanged || isFirstCheckDown) && !monitor.alertsEnabled) {
     console.log(`🔕 Status mudou mas alertas desabilitados para ${monitor.name}`)
   }
 }
 
 // Função para disparar alertas quando o status muda
 async function triggerAlerts(
-  monitor: { id: string; name: string; url: string; userId: string },
+  monitor: { id: string; name: string; url: string; teamId: string },
   previousStatus: string,
   newStatus: string,
   errorMessage: string | null
 ) {
   try {
-    // Busca os canais de alerta ativos do usuário
-    const channels = await findActiveChannelsByUserId(monitor.userId)
+    // Busca os canais de alerta ativos do time
+    const channels = await findActiveChannelsByTeamId(monitor.teamId)
 
     if (channels.length === 0) {
-      console.log(`   Nenhum canal de alerta configurado para o usuário`)
+      console.log(`   Nenhum canal de alerta configurado para o time`)
       return
     }
 
-    // Determina a severidade do alerta
-    const severity = newStatus === 'down' ? 'critical' : 'info'
-    const alertType = newStatus === 'down' ? 'monitor_down' : 'monitor_up'
+    // Monta a mensagem do alerta
+    const alertMessage = newStatus === 'down'
+      ? `Monitor "${monitor.name}" está offline: ${errorMessage || 'Falha na verificação'}`
+      : `Monitor "${monitor.name}" voltou a ficar online`
 
-    // Cria o alerta no banco
-    const alert = await createAlert({
-      monitorId: monitor.id,
-      type: alertType,
-      severity,
-      message: newStatus === 'down'
-        ? `Monitor "${monitor.name}" está offline: ${errorMessage || 'Falha na verificação'}`
-        : `Monitor "${monitor.name}" voltou a ficar online`,
-    })
-
-    console.log(`   Alerta criado: ${alert.id}`)
-
-    // Envia notificações para cada canal
+    // Envia notificações para cada canal e registra o alerta
     for (const channel of channels) {
       try {
+        // Cria o alerta no banco para este canal
+        const alert = await createAlert(
+          monitor.id,
+          channel.id,
+          newStatus as 'up' | 'down' | 'degraded',
+          alertMessage
+        )
+        console.log(`   Alerta criado: ${alert.id}`)
+
+        // Envia a notificação
         await sendNotification(
           channel.type as 'email' | 'webhook' | 'slack',
           channel.config as Record<string, string>,
           {
-            alertId: alert.id,
             monitorName: monitor.name,
             monitorUrl: monitor.url,
-            status: newStatus,
-            previousStatus,
-            message: alert.message,
-            timestamp: new Date().toISOString(),
+            status: newStatus as 'up' | 'down' | 'degraded',
+            message: alertMessage,
+            checkedAt: new Date(),
           }
         )
         console.log(`   ✅ Notificação enviada via ${channel.type}: ${channel.name}`)

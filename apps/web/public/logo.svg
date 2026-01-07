@@ -1,0 +1,7 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- B como fonte de sinal/beacon emanando ondas -->
+  <text x="20" y="46" font-family="Inter, system-ui, sans-serif" font-size="40" font-weight="800" fill="#10B981" text-anchor="middle">B</text>
+  <path d="M42 24 Q50 32 42 40" stroke="#10B981" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M48 18 Q60 32 48 46" stroke="#10B981" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.6"/>
+  <path d="M54 12 Q70 32 54 52" stroke="#10B981" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.3"/>
+</svg>

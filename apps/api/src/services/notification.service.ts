@@ -97,10 +97,9 @@ export async function sendWebhookNotification(
 ): Promise<boolean> {
   try {
     const body = JSON.stringify({
-      monitor: {
-        name: payload.monitorName,
-        url: payload.monitorUrl,
-      },
+      type: 'alert',
+      monitorName: payload.monitorName,
+      monitorUrl: payload.monitorUrl,
       status: payload.status,
       message: payload.message,
       latency: payload.latency,

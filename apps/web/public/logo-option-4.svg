@@ -1,0 +1,7 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- B com ponto pulsante (beacon ativo) -->
+  <text x="26" y="48" font-family="Inter, system-ui, sans-serif" font-size="46" font-weight="800" fill="#10B981" text-anchor="middle">B</text>
+  <circle cx="50" cy="14" r="10" fill="#10B981" opacity="0.2"/>
+  <circle cx="50" cy="14" r="6" fill="#10B981" opacity="0.4"/>
+  <circle cx="50" cy="14" r="3" fill="#10B981"/>
+</svg>

@@ -12,13 +12,14 @@ import type {
 
 // ============================================
 // Serviço de Monitors - CRUD e operações
+// Atualizado para usar teamId em vez de userId
 // ============================================
 
-export async function createMonitor(userId: string, data: CreateMonitorInput) {
+export async function createMonitor(teamId: string, data: CreateMonitorInput) {
   const monitor = await prisma.monitor.create({
     data: {
       ...data,
-      userId,
+      teamId,
     },
   })
 
@@ -30,8 +31,8 @@ export async function createMonitor(userId: string, data: CreateMonitorInput) {
   return monitor
 }
 
-export async function findAllMonitors(userId: string, query: ListMonitorsQuery) {
-  const where: { userId: string; active?: boolean } = { userId }
+export async function findAllMonitors(teamId: string, query: ListMonitorsQuery) {
+  const where: { teamId: string; active?: boolean } = { teamId }
 
   if (query.active !== undefined) {
     where.active = query.active === 'true'
@@ -55,22 +56,22 @@ export async function findAllMonitors(userId: string, query: ListMonitorsQuery) 
   }
 }
 
-export async function findMonitorById(userId: string, id: string) {
+export async function findMonitorById(teamId: string, id: string) {
   const monitor = await prisma.monitor.findFirst({
-    where: { id, userId },
+    where: { id, teamId },
   })
 
   return monitor
 }
 
 export async function updateMonitor(
-  userId: string,
+  teamId: string,
   id: string,
   data: UpdateMonitorInput
 ) {
-  // Verifica se o monitor pertence ao usuário
+  // Verifica se o monitor pertence ao time
   const existing = await prisma.monitor.findFirst({
-    where: { id, userId },
+    where: { id, teamId },
   })
 
   if (!existing) {
@@ -93,10 +94,10 @@ export async function updateMonitor(
   return monitor
 }
 
-export async function deleteMonitor(userId: string, id: string) {
-  // Verifica se o monitor pertence ao usuário
+export async function deleteMonitor(teamId: string, id: string) {
+  // Verifica se o monitor pertence ao time
   const existing = await prisma.monitor.findFirst({
-    where: { id, userId },
+    where: { id, teamId },
   })
 
   if (!existing) {
@@ -114,11 +115,11 @@ export async function deleteMonitor(userId: string, id: string) {
 }
 
 export async function getMonitorWithStatus(
-  userId: string,
+  teamId: string,
   id: string
 ): Promise<MonitorWithStatus | null> {
   const monitor = await prisma.monitor.findFirst({
-    where: { id, userId },
+    where: { id, teamId },
     include: {
       checks: {
         orderBy: { checkedAt: 'desc' },
@@ -166,10 +167,10 @@ export async function getMonitorWithStatus(
 }
 
 export async function findAllMonitorsWithStatus(
-  userId: string,
+  teamId: string,
   query: ListMonitorsQuery
 ): Promise<{ monitors: MonitorWithStatus[]; total: number; limit: number; offset: number }> {
-  const where: { userId: string; active?: boolean } = { userId }
+  const where: { teamId: string; active?: boolean } = { teamId }
 
   if (query.active !== undefined) {
     where.active = query.active === 'true'
@@ -228,4 +229,115 @@ export async function findAllMonitorsWithStatus(
     limit: query.limit,
     offset: query.offset,
   }
+}
+
+// Tipo para o histórico diário
+export interface DailyUptimeData {
+  date: string // YYYY-MM-DD
+  totalChecks: number
+  upChecks: number
+  downChecks: number
+  avgLatency: number | null
+  uptimePercentage: number
+  status: 'up' | 'down' | 'degraded' | 'partial' | 'no_data'
+}
+
+export async function getMonitorHistory(
+  teamId: string,
+  monitorId: string,
+  days: number = 90
+): Promise<DailyUptimeData[] | null> {
+  // Verifica se o monitor pertence ao time
+  const monitor = await prisma.monitor.findFirst({
+    where: { id: monitorId, teamId },
+  })
+
+  if (!monitor) {
+    return null
+  }
+
+  // Data de início (X dias atrás)
+  const startDate = new Date()
+  startDate.setDate(startDate.getDate() - days)
+  startDate.setHours(0, 0, 0, 0)
+
+  // Busca todos os checks do período
+  const checks = await prisma.check.findMany({
+    where: {
+      monitorId,
+      checkedAt: {
+        gte: startDate,
+      },
+    },
+    orderBy: { checkedAt: 'asc' },
+    select: {
+      status: true,
+      latency: true,
+      checkedAt: true,
+    },
+  })
+
+  // Agrupa por dia
+  const dailyData = new Map<string, { up: number; down: number; latencies: number[] }>()
+
+  // Inicializa todos os dias do período
+  for (let i = 0; i < days; i++) {
+    const date = new Date()
+    date.setDate(date.getDate() - (days - 1 - i))
+    const dateKey = date.toISOString().split('T')[0]
+    dailyData.set(dateKey, { up: 0, down: 0, latencies: [] })
+  }
+
+  // Processa os checks
+  for (const check of checks) {
+    const dateKey = check.checkedAt.toISOString().split('T')[0]
+    const dayData = dailyData.get(dateKey)
+
+    if (dayData) {
+      if (check.status === 'up') {
+        dayData.up++
+      } else {
+        dayData.down++
+      }
+      if (check.latency !== null) {
+        dayData.latencies.push(check.latency)
+      }
+    }
+  }
+
+  // Converte para array de resultados
+  const result: DailyUptimeData[] = []
+
+  for (const [date, data] of dailyData) {
+    const totalChecks = data.up + data.down
+    const uptimePercentage = totalChecks > 0 ? (data.up / totalChecks) * 100 : 0
+    const avgLatency = data.latencies.length > 0
+      ? Math.round(data.latencies.reduce((a, b) => a + b, 0) / data.latencies.length)
+      : null
+
+    let status: DailyUptimeData['status'] = 'no_data'
+    if (totalChecks > 0) {
+      if (uptimePercentage === 100) {
+        status = 'up'
+      } else if (uptimePercentage === 0) {
+        status = 'down'
+      } else if (uptimePercentage >= 99) {
+        status = 'degraded'
+      } else {
+        status = 'partial'
+      }
+    }
+
+    result.push({
+      date,
+      totalChecks,
+      upChecks: data.up,
+      downChecks: data.down,
+      avgLatency,
+      uptimePercentage,
+      status,
+    })
+  }
+
+  return result
 }

@@ -4,7 +4,8 @@ import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import * as api from '@/lib/api'
-import type { Monitor, ApiError } from '@/lib/api'
+import type { Monitor, ApiError, DailyUptimeData } from '@/lib/api'
+import { ConfirmModal, AlertModal, UptimeBar } from '@/components'
 
 function StatusBadge({ status }: { status: Monitor['currentStatus'] }) {
   const styles = {
@@ -32,11 +33,15 @@ export default function MonitorDetailPage({ params }: { params: Promise<{ id: st
   const { id } = use(params)
   const router = useRouter()
   const [monitor, setMonitor] = useState<Monitor | null>(null)
+  const [history, setHistory] = useState<DailyUptimeData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [alertModal, setAlertModal] = useState<{ open: boolean; message: string }>({ open: false, message: '' })
 
   useEffect(() => {
     loadMonitor()
+    loadHistory()
   }, [id])
 
   async function loadMonitor() {
@@ -55,6 +60,16 @@ export default function MonitorDetailPage({ params }: { params: Promise<{ id: st
     }
   }
 
+  async function loadHistory() {
+    try {
+      const data = await api.getMonitorHistory(id, 90)
+      setHistory(data.history)
+    } catch (err) {
+      // Silently fail - history is not critical
+      console.error('Erro ao carregar histórico:', err)
+    }
+  }
+
   async function handleToggleActive() {
     if (!monitor) return
 
@@ -63,22 +78,24 @@ export default function MonitorDetailPage({ params }: { params: Promise<{ id: st
       setMonitor(updated)
     } catch (err) {
       const apiError = err as ApiError
-      alert(apiError.error || 'Erro ao atualizar monitor')
+      setAlertModal({ open: true, message: apiError.error || 'Erro ao atualizar monitor' })
     }
   }
 
-  async function handleDelete() {
+  function handleDeleteClick() {
+    setDeleteModalOpen(true)
+  }
+
+  async function handleDeleteConfirm() {
     if (!monitor) return
-    if (!confirm(`Tem certeza que deseja deletar o monitor "${monitor.name}"?`)) {
-      return
-    }
+    setDeleteModalOpen(false)
 
     try {
       await api.deleteMonitor(monitor.id)
       router.push('/monitors')
     } catch (err) {
       const apiError = err as ApiError
-      alert(apiError.error || 'Erro ao deletar monitor')
+      setAlertModal({ open: true, message: apiError.error || 'Erro ao deletar monitor' })
     }
   }
 
@@ -164,7 +181,7 @@ export default function MonitorDetailPage({ params }: { params: Promise<{ id: st
             Editar
           </Link>
           <button
-            onClick={handleDelete}
+            onClick={handleDeleteClick}
             className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
           >
             Deletar
@@ -197,6 +214,14 @@ export default function MonitorDetailPage({ params }: { params: Promise<{ id: st
           </p>
         </div>
       </div>
+
+      {/* Uptime History */}
+      {history.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-white mb-4">Histórico de Uptime</h2>
+          <UptimeBar history={history} uptimePercentage={monitor.uptimePercentage} />
+        </div>
+      )}
 
       {/* Config */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
@@ -236,6 +261,27 @@ export default function MonitorDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteModalOpen}
+        title="Deletar Monitor"
+        message={`Tem certeza que deseja deletar o monitor "${monitor.name}"? Esta ação não pode ser desfeita.`}
+        confirmText="Deletar"
+        cancelText="Cancelar"
+        confirmVariant="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteModalOpen(false)}
+      />
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.open}
+        title="Erro"
+        message={alertModal.message}
+        variant="error"
+        onClose={() => setAlertModal({ open: false, message: '' })}
+      />
     </div>
   )
 }

@@ -6,17 +6,21 @@ import {
   listAlertChannelsQuerySchema,
 } from './alerts.schema.js'
 import * as alertsService from './alerts.service.js'
+import { createTeamAuthHook } from '../../lib/team-auth.js'
 
 // ============================================
 // Rotas de Alert Channels - CRUD completo
+// Atualizado para usar autenticação por time
 // ============================================
 
 export async function alertsRoutes(app: FastifyInstance) {
-  // Todas as rotas requerem autenticação
-  app.addHook('onRequest', app.authenticate)
+  // Hook para rotas de leitura (VIEWER)
+  const viewerAuth = createTeamAuthHook('VIEWER')
+  // Hook para rotas de escrita (EDITOR)
+  const editorAuth = createTeamAuthHook('EDITOR')
 
-  // POST /alerts/channels - Criar novo canal
-  app.post('/channels', async (request, reply) => {
+  // POST /alerts/channels - Criar novo canal (requer EDITOR)
+  app.post('/channels', { onRequest: [editorAuth] }, async (request, reply) => {
     const parseResult = createAlertChannelSchema.safeParse(request.body)
 
     if (!parseResult.success) {
@@ -30,15 +34,15 @@ export async function alertsRoutes(app: FastifyInstance) {
     }
 
     const channel = await alertsService.createAlertChannel(
-      request.user.sub,
+      request.teamContext!.teamId,
       parseResult.data
     )
 
     return reply.status(201).send(channel)
   })
 
-  // GET /alerts/channels - Listar canais do usuário
-  app.get('/channels', async (request, reply) => {
+  // GET /alerts/channels - Listar canais do time (requer VIEWER)
+  app.get('/channels', { onRequest: [viewerAuth] }, async (request, reply) => {
     const parseResult = listAlertChannelsQuerySchema.safeParse(request.query)
 
     if (!parseResult.success) {
@@ -52,15 +56,15 @@ export async function alertsRoutes(app: FastifyInstance) {
     }
 
     const result = await alertsService.findAllAlertChannels(
-      request.user.sub,
+      request.teamContext!.teamId,
       parseResult.data
     )
 
     return reply.send(result)
   })
 
-  // GET /alerts/channels/:id - Buscar canal por ID
-  app.get('/channels/:id', async (request, reply) => {
+  // GET /alerts/channels/:id - Buscar canal por ID (requer VIEWER)
+  app.get('/channels/:id', { onRequest: [viewerAuth] }, async (request, reply) => {
     const parseResult = alertChannelIdSchema.safeParse(request.params)
 
     if (!parseResult.success) {
@@ -70,7 +74,7 @@ export async function alertsRoutes(app: FastifyInstance) {
     }
 
     const channel = await alertsService.findAlertChannelById(
-      request.user.sub,
+      request.teamContext!.teamId,
       parseResult.data.id
     )
 
@@ -83,8 +87,8 @@ export async function alertsRoutes(app: FastifyInstance) {
     return reply.send(channel)
   })
 
-  // PUT /alerts/channels/:id - Atualizar canal
-  app.put('/channels/:id', async (request, reply) => {
+  // PUT /alerts/channels/:id - Atualizar canal (requer EDITOR)
+  app.put('/channels/:id', { onRequest: [editorAuth] }, async (request, reply) => {
     const idResult = alertChannelIdSchema.safeParse(request.params)
 
     if (!idResult.success) {
@@ -106,7 +110,7 @@ export async function alertsRoutes(app: FastifyInstance) {
     }
 
     const channel = await alertsService.updateAlertChannel(
-      request.user.sub,
+      request.teamContext!.teamId,
       idResult.data.id,
       bodyResult.data
     )
@@ -120,8 +124,8 @@ export async function alertsRoutes(app: FastifyInstance) {
     return reply.send(channel)
   })
 
-  // DELETE /alerts/channels/:id - Deletar canal
-  app.delete('/channels/:id', async (request, reply) => {
+  // DELETE /alerts/channels/:id - Deletar canal (requer EDITOR)
+  app.delete('/channels/:id', { onRequest: [editorAuth] }, async (request, reply) => {
     const parseResult = alertChannelIdSchema.safeParse(request.params)
 
     if (!parseResult.success) {
@@ -131,7 +135,7 @@ export async function alertsRoutes(app: FastifyInstance) {
     }
 
     const deleted = await alertsService.deleteAlertChannel(
-      request.user.sub,
+      request.teamContext!.teamId,
       parseResult.data.id
     )
 

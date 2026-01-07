@@ -1,0 +1,7 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- B dentro de círculos concêntricos (radar/beacon) -->
+  <circle cx="32" cy="32" r="28" stroke="#10B981" stroke-width="1.5" fill="none" opacity="0.25"/>
+  <circle cx="32" cy="32" r="20" stroke="#10B981" stroke-width="1.5" fill="none" opacity="0.5"/>
+  <circle cx="32" cy="32" r="12" stroke="#10B981" stroke-width="2" fill="none" opacity="0.75"/>
+  <text x="32" y="40" font-family="Inter, system-ui, sans-serif" font-size="24" font-weight="800" fill="#10B981" text-anchor="middle">B</text>
+</svg>

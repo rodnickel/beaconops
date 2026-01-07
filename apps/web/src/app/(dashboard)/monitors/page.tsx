@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import * as api from '@/lib/api'
 import type { Monitor, ApiError } from '@/lib/api'
+import { ConfirmModal, AlertModal } from '@/components'
 
 function StatusDot({ status }: { status: Monitor['currentStatus'] }) {
   const colors = {
@@ -46,6 +47,8 @@ export default function MonitorsPage() {
   const [monitors, setMonitors] = useState<Monitor[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: '', name: '' })
+  const [alertModal, setAlertModal] = useState<{ open: boolean; message: string }>({ open: false, message: '' })
 
   useEffect(() => {
     loadMonitors()
@@ -67,17 +70,20 @@ export default function MonitorsPage() {
     }
   }
 
-  async function handleDelete(id: string, name: string) {
-    if (!confirm(`Tem certeza que deseja deletar o monitor "${name}"?`)) {
-      return
-    }
+  function handleDeleteClick(id: string, name: string) {
+    setDeleteModal({ open: true, id, name })
+  }
+
+  async function handleDeleteConfirm() {
+    const { id } = deleteModal
+    setDeleteModal({ open: false, id: '', name: '' })
 
     try {
       await api.deleteMonitor(id)
       setMonitors(monitors.filter((m) => m.id !== id))
     } catch (err) {
       const apiError = err as ApiError
-      alert(apiError.error || 'Erro ao deletar monitor')
+      setAlertModal({ open: true, message: apiError.error || 'Erro ao deletar monitor' })
     }
   }
 
@@ -87,7 +93,7 @@ export default function MonitorsPage() {
       setMonitors(monitors.map((m) => (m.id === monitor.id ? updated : m)))
     } catch (err) {
       const apiError = err as ApiError
-      alert(apiError.error || 'Erro ao atualizar monitor')
+      setAlertModal({ open: true, message: apiError.error || 'Erro ao atualizar monitor' })
     }
   }
 
@@ -241,7 +247,7 @@ export default function MonitorsPage() {
                       </svg>
                     </Link>
                     <button
-                      onClick={() => handleDelete(monitor.id, monitor.name)}
+                      onClick={() => handleDeleteClick(monitor.id, monitor.name)}
                       className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                       title="Deletar"
                     >
@@ -265,6 +271,27 @@ export default function MonitorsPage() {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteModal.open}
+        title="Deletar Monitor"
+        message={`Tem certeza que deseja deletar o monitor "${deleteModal.name}"? Esta ação não pode ser desfeita.`}
+        confirmText="Deletar"
+        cancelText="Cancelar"
+        confirmVariant="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteModal({ open: false, id: '', name: '' })}
+      />
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.open}
+        title="Erro"
+        message={alertModal.message}
+        variant="error"
+        onClose={() => setAlertModal({ open: false, message: '' })}
+      />
     </div>
   )
 }

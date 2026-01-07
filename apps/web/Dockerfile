@@ -2,26 +2,25 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Copy only web package files
+COPY apps/web/package.json ./
 
-# Copy package files from monorepo root
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/web/package.json ./apps/web/
-
-# Install dependencies
-RUN pnpm install --filter=web...
+# Install dependencies with npm
+RUN npm install
 
 # Copy web source code
-COPY apps/web ./apps/web/
+COPY apps/web/src ./src
+COPY apps/web/next.config.ts ./
+COPY apps/web/tsconfig.json ./
+COPY apps/web/tailwind.config.ts ./
+COPY apps/web/postcss.config.mjs ./
 
 # Build argument for API URL
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 # Build
-WORKDIR /app/apps/web
-RUN pnpm build
+RUN npm run build
 
 # Production stage
 FROM node:20-alpine AS runner
@@ -31,11 +30,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Copy built files
-COPY --from=builder /app/apps/web/.next/standalone ./
-COPY --from=builder /app/apps/web/.next/static ./.next/static
-# Copy public folder if exists
-RUN mkdir -p ./public
-COPY --from=builder /app/apps/web/public/ ./public/
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
 EXPOSE 3000
 

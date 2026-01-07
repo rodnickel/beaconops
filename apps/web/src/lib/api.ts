@@ -25,6 +25,19 @@ export interface AuthResponse {
 }
 
 // ----------------------------------------
+// Função para obter o team ID atual
+// ----------------------------------------
+export function getCurrentTeamId(): string | null {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem('currentTeamId')
+}
+
+export function setCurrentTeamId(teamId: string): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem('currentTeamId', teamId)
+}
+
+// ----------------------------------------
 // Função base para fazer requisições
 // ----------------------------------------
 async function request<T>(
@@ -35,15 +48,31 @@ async function request<T>(
 
   // Pega o token do localStorage (se existir)
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+  const teamId = getCurrentTeamId()
+
+  // Só inclui Content-Type: application/json se houver body
+  const headers: Record<string, string> = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(teamId ? { 'X-Team-Id': teamId } : {}),
+  }
+
+  // Adiciona Content-Type apenas se houver body
+  if (options.body) {
+    headers['Content-Type'] = 'application/json'
+  }
 
   const response = await fetch(url, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...headers,
       ...options.headers,
     },
   })
+
+  // Se for 204 No Content, retorna sem tentar parsear JSON
+  if (response.status === 204) {
+    return undefined as T
+  }
 
   const data = await response.json()
 
@@ -83,6 +112,170 @@ export async function getMe() {
 }
 
 // ============================================
+// Tipos de Teams
+// ============================================
+
+export type TeamRole = 'ADMIN' | 'EDITOR' | 'VIEWER'
+
+export interface Team {
+  id: string
+  name: string
+  slug: string
+  createdAt: string
+  updatedAt: string
+  ownerId: string
+  owner: {
+    id: string
+    name: string | null
+    email: string
+  }
+  members: TeamMember[]
+  _count: {
+    monitors: number
+    alertChannels: number
+    statusPages: number
+  }
+}
+
+export interface TeamMember {
+  id: string
+  role: TeamRole
+  joinedAt: string
+  user: {
+    id: string
+    name: string | null
+    email: string
+  }
+}
+
+export interface TeamInvite {
+  id: string
+  email: string | null
+  token: string
+  role: TeamRole
+  expiresAt: string
+  usedAt: string | null
+  maxUses: number
+  useCount: number
+  createdAt: string
+  invitedBy: {
+    id: string
+    name: string | null
+    email: string
+  }
+}
+
+export interface PublicInviteInfo {
+  teamName: string
+  teamSlug: string
+  role: TeamRole
+  expiresAt: string
+  invitedByName: string | null
+  invitedByEmail: string
+}
+
+export interface CreateTeamData {
+  name: string
+  slug: string
+}
+
+export interface UpdateTeamData {
+  name?: string
+  slug?: string
+}
+
+export interface CreateInviteData {
+  email?: string
+  role?: TeamRole
+  expiresInDays?: number
+  maxUses?: number
+}
+
+// ============================================
+// Funções de Teams
+// ============================================
+
+export async function getTeams() {
+  return request<Team[]>('/teams')
+}
+
+export async function getTeam(id: string) {
+  return request<Team>(`/teams/${id}`)
+}
+
+export async function createTeam(data: CreateTeamData) {
+  return request<Team>('/teams', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateTeam(id: string, data: UpdateTeamData) {
+  return request<Team>(`/teams/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteTeam(id: string) {
+  return request<void>(`/teams/${id}`, {
+    method: 'DELETE',
+  })
+}
+
+// Team Members
+export async function getTeamMembers(teamId: string) {
+  return request<TeamMember[]>(`/teams/${teamId}/members`)
+}
+
+export async function updateMemberRole(teamId: string, userId: string, role: TeamRole) {
+  return request<TeamMember>(`/teams/${teamId}/members/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ role }),
+  })
+}
+
+export async function removeMember(teamId: string, userId: string) {
+  return request<void>(`/teams/${teamId}/members/${userId}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function leaveTeam(teamId: string) {
+  return request<void>(`/teams/${teamId}/leave`, {
+    method: 'POST',
+  })
+}
+
+// Team Invites
+export async function createInvite(teamId: string, data: CreateInviteData) {
+  return request<TeamInvite>(`/teams/${teamId}/invites`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function getTeamInvites(teamId: string) {
+  return request<TeamInvite[]>(`/teams/${teamId}/invites`)
+}
+
+export async function revokeInvite(teamId: string, inviteId: string) {
+  return request<void>(`/teams/${teamId}/invites/${inviteId}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function getInviteInfo(token: string) {
+  return request<PublicInviteInfo>(`/invites/${token}`)
+}
+
+export async function acceptInvite(token: string) {
+  return request<{ teamId: string; role: TeamRole }>(`/invites/${token}/accept`, {
+    method: 'POST',
+  })
+}
+
+// ============================================
 // Tipos de Monitors
 // ============================================
 
@@ -99,7 +292,7 @@ export interface Monitor {
   alertsEnabled: boolean
   createdAt: string
   updatedAt: string
-  userId: string
+  teamId: string
   currentStatus?: 'up' | 'down' | 'degraded' | 'unknown'
   lastCheck?: string
   lastLatency?: number
@@ -176,6 +369,29 @@ export async function deleteMonitor(id: string) {
 }
 
 // ============================================
+// Tipos e Funções de Histórico
+// ============================================
+
+export interface DailyUptimeData {
+  date: string // YYYY-MM-DD
+  totalChecks: number
+  upChecks: number
+  downChecks: number
+  avgLatency: number | null
+  uptimePercentage: number
+  status: 'up' | 'down' | 'degraded' | 'partial' | 'no_data'
+}
+
+export interface MonitorHistoryResponse {
+  history: DailyUptimeData[]
+  days: number
+}
+
+export async function getMonitorHistory(id: string, days: number = 90) {
+  return request<MonitorHistoryResponse>(`/monitors/${id}/history?days=${days}`)
+}
+
+// ============================================
 // Tipos de Alert Channels
 // ============================================
 
@@ -246,4 +462,186 @@ export async function deleteAlertChannel(id: string) {
   return request<void>(`/alerts/channels/${id}`, {
     method: 'DELETE',
   })
+}
+
+// ============================================
+// Tipos de Status Pages
+// ============================================
+
+export interface StatusPageSection {
+  id: string
+  name: string
+  displayOrder: number
+}
+
+export interface StatusPageMonitor {
+  id: string
+  displayName: string | null
+  displayOrder: number
+  sectionId: string | null
+  monitor: {
+    id: string
+    name: string
+    url: string
+    currentStatus: string | null
+    lastCheck: string | null
+    lastLatency: number | null
+  }
+}
+
+export interface StatusPage {
+  id: string
+  slug: string
+  name: string
+  description: string | null
+  logoUrl: string | null
+  faviconUrl: string | null
+  isPublic: boolean
+  primaryColor: string
+  backgroundColor: string
+  showUptime: boolean
+  showLatency: boolean
+  showHistory: boolean
+  historyDays: number
+  customDomain: string | null
+  createdAt: string
+  updatedAt: string
+  teamId: string
+  sections: StatusPageSection[]
+  monitors: StatusPageMonitor[]
+}
+
+export interface StatusPageListResponse {
+  statusPages: StatusPage[]
+}
+
+export interface CreateStatusPageData {
+  slug: string
+  name: string
+  description?: string
+  logoUrl?: string | null
+  faviconUrl?: string | null
+  isPublic?: boolean
+  primaryColor?: string
+  backgroundColor?: string
+  showUptime?: boolean
+  showLatency?: boolean
+  showHistory?: boolean
+  historyDays?: number
+  customDomain?: string | null
+  monitorIds?: string[]
+}
+
+export interface UpdateStatusPageData {
+  slug?: string
+  name?: string
+  description?: string
+  logoUrl?: string | null
+  faviconUrl?: string | null
+  isPublic?: boolean
+  primaryColor?: string
+  backgroundColor?: string
+  showUptime?: boolean
+  showLatency?: boolean
+  showHistory?: boolean
+  historyDays?: number
+  customDomain?: string | null
+}
+
+export interface UpdateStatusPageLayoutData {
+  sections: {
+    id?: string
+    name: string
+    displayOrder: number
+  }[]
+  monitors: {
+    monitorId: string
+    displayName?: string | null
+    displayOrder: number
+    sectionId?: string | null
+  }[]
+}
+
+export interface PublicMonitor {
+  name: string
+  currentStatus: string | null
+  lastCheck: string | null
+  lastLatency: number | null
+  uptimePercentage?: number
+  history?: {
+    date: string
+    status: string
+    uptimePercentage: number
+  }[]
+}
+
+export interface PublicSection {
+  id: string
+  name: string
+  displayOrder: number
+  monitors: PublicMonitor[]
+}
+
+export interface PublicStatusPage {
+  slug: string
+  name: string
+  description: string | null
+  logoUrl: string | null
+  faviconUrl: string | null
+  primaryColor: string
+  backgroundColor: string
+  showUptime: boolean
+  showLatency: boolean
+  showHistory: boolean
+  historyDays: number
+  sections: PublicSection[]
+  monitors: PublicMonitor[]
+}
+
+// ============================================
+// Funções de Status Pages
+// ============================================
+
+export async function getStatusPages() {
+  return request<StatusPageListResponse>('/status-pages')
+}
+
+export async function getStatusPage(id: string) {
+  return request<StatusPage>(`/status-pages/${id}`)
+}
+
+export async function createStatusPage(data: CreateStatusPageData) {
+  return request<StatusPage>('/status-pages', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateStatusPage(id: string, data: UpdateStatusPageData) {
+  return request<StatusPage>(`/status-pages/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateStatusPageLayout(id: string, data: UpdateStatusPageLayoutData) {
+  return request<StatusPage>(`/status-pages/${id}/layout`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteStatusPage(id: string) {
+  return request<void>(`/status-pages/${id}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function checkSlugAvailable(slug: string) {
+  return request<{ available: boolean }>(`/status-pages/check-slug/${slug}`)
+}
+
+// Rota pública (não requer autenticação)
+export async function getPublicStatusPage(slug: string) {
+  return request<PublicStatusPage>(`/public/status/${slug}`)
 }

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import * as api from '@/lib/api'
 import type { AlertChannel, ApiError } from '@/lib/api'
+import { ConfirmModal, AlertModal } from '@/components'
 
 function ChannelTypeIcon({ type }: { type: AlertChannel['type'] }) {
   if (type === 'email') {
@@ -55,6 +56,8 @@ export default function AlertsPage() {
   const [channels, setChannels] = useState<AlertChannel[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; channel: AlertChannel | null }>({ open: false, channel: null })
+  const [alertModal, setAlertModal] = useState<{ open: boolean; message: string }>({ open: false, message: '' })
 
   useEffect(() => {
     loadChannels()
@@ -82,21 +85,25 @@ export default function AlertsPage() {
       setChannels(channels.map(c => c.id === channel.id ? updated : c))
     } catch (err) {
       const apiError = err as ApiError
-      alert(apiError.error || 'Erro ao atualizar canal')
+      setAlertModal({ open: true, message: apiError.error || 'Erro ao atualizar canal' })
     }
   }
 
-  async function handleDelete(channel: AlertChannel) {
-    if (!confirm(`Tem certeza que deseja deletar o canal "${channel.name}"?`)) {
-      return
-    }
+  function handleDeleteClick(channel: AlertChannel) {
+    setDeleteModal({ open: true, channel })
+  }
+
+  async function handleDeleteConfirm() {
+    if (!deleteModal.channel) return
+    const channelToDelete = deleteModal.channel
+    setDeleteModal({ open: false, channel: null })
 
     try {
-      await api.deleteAlertChannel(channel.id)
-      setChannels(channels.filter(c => c.id !== channel.id))
+      await api.deleteAlertChannel(channelToDelete.id)
+      setChannels(channels.filter(c => c.id !== channelToDelete.id))
     } catch (err) {
       const apiError = err as ApiError
-      alert(apiError.error || 'Erro ao deletar canal')
+      setAlertModal({ open: true, message: apiError.error || 'Erro ao deletar canal' })
     }
   }
 
@@ -207,7 +214,7 @@ export default function AlertsPage() {
                     Editar
                   </Link>
                   <button
-                    onClick={() => handleDelete(channel)}
+                    onClick={() => handleDeleteClick(channel)}
                     className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
                   >
                     Deletar
@@ -218,6 +225,27 @@ export default function AlertsPage() {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteModal.open}
+        title="Deletar Canal"
+        message={`Tem certeza que deseja deletar o canal "${deleteModal.channel?.name}"? Esta ação não pode ser desfeita.`}
+        confirmText="Deletar"
+        cancelText="Cancelar"
+        confirmVariant="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteModal({ open: false, channel: null })}
+      />
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.open}
+        title="Erro"
+        message={alertModal.message}
+        variant="error"
+        onClose={() => setAlertModal({ open: false, message: '' })}
+      />
     </div>
   )
 }

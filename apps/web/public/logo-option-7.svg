@@ -1,0 +1,7 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- B em quadrado com indicador de sinal no canto -->
+  <rect x="8" y="8" width="48" height="48" rx="12" fill="#10B981"/>
+  <text x="28" y="44" font-family="Inter, system-ui, sans-serif" font-size="32" font-weight="700" fill="#ffffff" text-anchor="middle">B</text>
+  <circle cx="48" cy="20" r="2" fill="#ffffff"/>
+  <path d="M44 16 Q52 20 44 24" stroke="#ffffff" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.8"/>
+</svg>

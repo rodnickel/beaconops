@@ -21,6 +21,20 @@ export default function LoginPage() {
     try {
       const response = await api.login(email, password)
       localStorage.setItem('token', response.token)
+
+      // Verifica se ha um convite pendente
+      const pendingInvite = localStorage.getItem('pendingInvite')
+      if (pendingInvite) {
+        localStorage.removeItem('pendingInvite')
+        try {
+          const result = await api.acceptInvite(pendingInvite)
+          api.setCurrentTeamId(result.teamId)
+        } catch {
+          // Se falhar ao aceitar o convite, continua normalmente
+          console.error('Erro ao aceitar convite pendente')
+        }
+      }
+
       router.push('/dashboard')
     } catch (err) {
       const apiError = err as ApiError
@@ -36,9 +50,9 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-xl">O</span>
+            <span className="text-white font-bold text-xl">B</span>
           </div>
-          <h1 className="text-2xl font-bold text-white">Observabilidade</h1>
+          <h1 className="text-2xl font-bold text-white">BeaconOps</h1>
           <p className="text-zinc-400 mt-1">Entre na sua conta</p>
         </div>
 

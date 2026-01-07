@@ -5,6 +5,8 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import * as api from '@/lib/api'
 import type { User } from '@/lib/api'
+import { TeamProvider } from '@/contexts/TeamContext'
+import TeamSelector from '@/components/TeamSelector'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -13,6 +15,7 @@ interface DashboardLayoutProps {
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
   { name: 'Monitors', href: '/monitors', icon: MonitorIcon },
+  { name: 'Status Pages', href: '/status-pages', icon: GlobeIcon },
   { name: 'Alertas', href: '/alerts', icon: BellIcon },
 ]
 
@@ -36,6 +39,14 @@ function BellIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+    </svg>
+  )
+}
+
+function GlobeIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
     </svg>
   )
 }
@@ -92,71 +103,78 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950">
-      {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 w-64 bg-zinc-900 border-r border-zinc-800">
-        {/* Logo */}
-        <div className="h-16 flex items-center px-6 border-b border-zinc-800">
-          <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">O</span>
-            </div>
-            <span className="text-lg font-semibold text-white">Observabilidade</span>
-          </Link>
-        </div>
-
-        {/* Navigation */}
-        <nav className="p-4 space-y-1">
-          {navigation.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-emerald-500/10 text-emerald-400'
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
-                }`}
-              >
-                <item.icon className="w-5 h-5" />
-                {item.name}
-              </Link>
-            )
-          })}
-        </nav>
-
-        {/* User section */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-zinc-800">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 bg-zinc-700 rounded-full flex items-center justify-center">
-              <span className="text-sm font-medium text-zinc-300">
-                {user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">
-                {user?.name || 'Usuário'}
-              </p>
-              <p className="text-xs text-zinc-500 truncate">{user?.email}</p>
-            </div>
+    <TeamProvider>
+      <div className="min-h-screen bg-zinc-950">
+        {/* Sidebar */}
+        <aside className="fixed inset-y-0 left-0 w-64 bg-zinc-900 border-r border-zinc-800">
+          {/* Logo */}
+          <div className="h-16 flex items-center px-6 border-b border-zinc-800">
+            <Link href="/dashboard" className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">B</span>
+              </div>
+              <span className="text-lg font-semibold text-white">BeaconOps</span>
+            </Link>
           </div>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-400 hover:text-red-400 hover:bg-zinc-800 rounded-lg transition-colors"
-          >
-            <LogoutIcon className="w-4 h-4" />
-            Sair
-          </button>
-        </div>
-      </aside>
 
-      {/* Main content */}
-      <main className="pl-64">
-        <div className="min-h-screen">
-          {children}
-        </div>
-      </main>
-    </div>
+          {/* Team Selector */}
+          <div className="relative">
+            <TeamSelector />
+          </div>
+
+          {/* Navigation */}
+          <nav className="p-4 space-y-1">
+            {navigation.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-emerald-500/10 text-emerald-400'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                  }`}
+                >
+                  <item.icon className="w-5 h-5" />
+                  {item.name}
+                </Link>
+              )
+            })}
+          </nav>
+
+          {/* User section */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-zinc-800">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 bg-zinc-700 rounded-full flex items-center justify-center">
+                <span className="text-sm font-medium text-zinc-300">
+                  {user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">
+                  {user?.name || 'Usuário'}
+                </p>
+                <p className="text-xs text-zinc-500 truncate">{user?.email}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-400 hover:text-red-400 hover:bg-zinc-800 rounded-lg transition-colors"
+            >
+              <LogoutIcon className="w-4 h-4" />
+              Sair
+            </button>
+          </div>
+        </aside>
+
+        {/* Main content */}
+        <main className="pl-64">
+          <div className="min-h-screen">
+            {children}
+          </div>
+        </main>
+      </div>
+    </TeamProvider>
   )
 }

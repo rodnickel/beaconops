@@ -3,29 +3,29 @@ import type {
   CreateAlertChannelInput,
   UpdateAlertChannelInput,
   ListAlertChannelsQuery,
-  AlertChannelConfig,
 } from './alerts.schema.js'
 
 // ============================================
 // Serviço de Alert Channels - CRUD
+// Atualizado para usar teamId em vez de userId
 // ============================================
 
-export async function createAlertChannel(userId: string, data: CreateAlertChannelInput) {
+export async function createAlertChannel(teamId: string, data: CreateAlertChannelInput) {
   const channel = await prisma.alertChannel.create({
     data: {
       name: data.name,
       type: data.type,
       config: data.config as object,
       active: data.active,
-      userId,
+      teamId,
     },
   })
 
   return channel
 }
 
-export async function findAllAlertChannels(userId: string, query: ListAlertChannelsQuery) {
-  const where: { userId: string; active?: boolean; type?: string } = { userId }
+export async function findAllAlertChannels(teamId: string, query: ListAlertChannelsQuery) {
+  const where: { teamId: string; active?: boolean; type?: string } = { teamId }
 
   if (query.active !== undefined) {
     where.active = query.active === 'true'
@@ -53,21 +53,21 @@ export async function findAllAlertChannels(userId: string, query: ListAlertChann
   }
 }
 
-export async function findAlertChannelById(userId: string, id: string) {
+export async function findAlertChannelById(teamId: string, id: string) {
   const channel = await prisma.alertChannel.findFirst({
-    where: { id, userId },
+    where: { id, teamId },
   })
 
   return channel
 }
 
 export async function updateAlertChannel(
-  userId: string,
+  teamId: string,
   id: string,
   data: UpdateAlertChannelInput
 ) {
   const existing = await prisma.alertChannel.findFirst({
-    where: { id, userId },
+    where: { id, teamId },
   })
 
   if (!existing) {
@@ -86,9 +86,9 @@ export async function updateAlertChannel(
   return channel
 }
 
-export async function deleteAlertChannel(userId: string, id: string) {
+export async function deleteAlertChannel(teamId: string, id: string) {
   const existing = await prisma.alertChannel.findFirst({
-    where: { id, userId },
+    where: { id, teamId },
   })
 
   if (!existing) {
@@ -102,10 +102,10 @@ export async function deleteAlertChannel(userId: string, id: string) {
   return true
 }
 
-// Busca todos os canais ativos de um usuário (para enviar alertas)
-export async function findActiveChannelsByUserId(userId: string) {
+// Busca todos os canais ativos de um time (para enviar alertas)
+export async function findActiveChannelsByTeamId(teamId: string) {
   return prisma.alertChannel.findMany({
-    where: { userId, active: true },
+    where: { teamId, active: true },
   })
 }
 

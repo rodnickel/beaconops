@@ -2,29 +2,34 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Install netcat for health checks
+RUN apk add --no-cache netcat-openbsd
 
-# Copy package files from monorepo root
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/api/package.json ./apps/api/
-COPY apps/api/prisma ./apps/api/prisma/
+# Copy only api package files
+COPY apps/api/package.json ./
+COPY apps/api/prisma ./prisma/
 
-# Install dependencies
-WORKDIR /app/apps/api
-RUN cd /app && pnpm install --filter=api...
+# Install dependencies with npm
+RUN npm install
 
 # Generate Prisma client
-RUN pnpm prisma generate
+RUN npx prisma generate
 
-# Copy API source code
+# Copy API source code (file by file to avoid overwriting node_modules)
 COPY apps/api/src ./src/
 COPY apps/api/tsconfig.json ./
+COPY apps/api/docker-entrypoint.sh ./
 
 # Build
-RUN pnpm build
+RUN npm run build
+
+# Make entrypoint executable
+RUN chmod +x docker-entrypoint.sh
 
 EXPOSE 3333
+
+# Use entrypoint for migrations
+ENTRYPOINT ["./docker-entrypoint.sh"]
 
 # Default command (can be overridden for worker)
 CMD ["node", "dist/server.js"]

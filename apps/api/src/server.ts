@@ -4,9 +4,12 @@ import jwt from '@fastify/jwt'
 import { env } from './config/env.js'
 import { prisma } from './lib/prisma.js'
 import { registerAuthDecorator } from './lib/auth.js'
+import { registerTeamAuthDecorator } from './lib/team-auth.js'
 import { authRoutes } from './modules/auth/auth.routes.js'
 import { monitorsRoutes } from './modules/monitors/monitors.routes.js'
 import { alertsRoutes } from './modules/alerts/alerts.routes.js'
+import { statusPagesRoutes, publicStatusPageRoutes } from './modules/status-pages/status-pages.routes.js'
+import { teamsRoutes, invitesRoutes } from './modules/teams/teams.routes.js'
 
 // Cria a instância do Fastify com logger habilitado
 const app = Fastify({
@@ -22,6 +25,21 @@ const app = Fastify({
           }
         : undefined,
   },
+})
+
+// Hook para logar todas as requisições
+app.addHook('onRequest', async (request) => {
+  console.log(`📥 ${request.method} ${request.url}`)
+})
+
+// Hook para logar respostas
+app.addHook('onResponse', async (request, reply) => {
+  console.log(`📤 ${request.method} ${request.url} -> ${reply.statusCode}`)
+})
+
+// Hook para logar erros
+app.addHook('onError', async (request, reply, error) => {
+  console.log(`❌ ERROR ${request.method} ${request.url}:`, error.message)
 })
 
 // Registra plugins
@@ -42,6 +60,9 @@ async function registerPlugins() {
 
   // Registra o decorator de autenticação
   await registerAuthDecorator(app)
+
+  // Registra o decorator de autorização de times
+  await registerTeamAuthDecorator(app)
 }
 
 // Registra as rotas
@@ -54,6 +75,18 @@ async function registerRoutes() {
 
   // Rotas de alerts: /alerts/*
   await app.register(alertsRoutes, { prefix: '/alerts' })
+
+  // Rotas de status pages (autenticadas): /status-pages/*
+  await app.register(statusPagesRoutes, { prefix: '/status-pages' })
+
+  // Rotas públicas de status pages: /public/status/*
+  await app.register(publicStatusPageRoutes, { prefix: '/public/status' })
+
+  // Rotas de times: /teams/*
+  await app.register(teamsRoutes, { prefix: '/teams' })
+
+  // Rotas públicas de convites: /invites/*
+  await app.register(invitesRoutes, { prefix: '/invites' })
 }
 
 // Rota de health check
@@ -64,7 +97,7 @@ app.get('/health', async () => {
 // Rota raiz
 app.get('/', async () => {
   return {
-    name: 'Observabilidade API',
+    name: 'BeaconOps API',
     version: '0.1.0',
     docs: '/docs',
   }

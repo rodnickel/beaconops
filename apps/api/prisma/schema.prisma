@@ -11,6 +11,15 @@ datasource db {
 }
 
 // ============================================
+// ENUM: Team Member Role
+// ============================================
+enum TeamRole {
+  ADMIN  // Gerencia time, membros e recursos
+  EDITOR // Cria/edita monitors, alerts, status pages
+  VIEWER // Apenas visualização
+}
+
+// ============================================
 // MODELO: User (Usuário do sistema)
 // ============================================
 model User {
@@ -21,11 +30,87 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  // Relacionamentos
-  monitors      Monitor[]
-  alertChannels AlertChannel[]
+  // Relacionamentos de Times
+  ownedTeams  Team[]       @relation("TeamOwner")
+  memberships TeamMember[]
+  sentInvites TeamInvite[] @relation("InvitedBy")
 
   @@map("users")
+}
+
+// ============================================
+// MODELO: Team (Time/Equipe)
+// ============================================
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Owner é sempre ADMIN e não pode ser removido
+  ownerId String @map("owner_id")
+  owner   User   @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Relacionamentos
+  members       TeamMember[]
+  invites       TeamInvite[]
+  monitors      Monitor[]
+  alertChannels AlertChannel[]
+  statusPages   StatusPage[]
+
+  @@index([ownerId])
+  @@map("teams")
+}
+
+// ============================================
+// MODELO: TeamMember (Membro da equipe)
+// ============================================
+model TeamMember {
+  id       String   @id @default(cuid())
+  role     TeamRole @default(VIEWER)
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  // Relacionamento com Team
+  teamId String @map("team_id")
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  // Relacionamento com User
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+  @@map("team_members")
+}
+
+// ============================================
+// MODELO: TeamInvite (Convite para equipe)
+// ============================================
+model TeamInvite {
+  id        String    @id @default(cuid())
+  email     String? // null = convite por link
+  token     String    @unique @default(cuid())
+  role      TeamRole  @default(VIEWER)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  maxUses   Int       @default(1) @map("max_uses") // 0 = ilimitado
+  useCount  Int       @default(0) @map("use_count")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  // Quem criou o convite
+  invitedById String @map("invited_by_id")
+  invitedBy   User   @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  // Qual time
+  teamId String @map("team_id")
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([token])
+  @@index([email])
+  @@map("team_invites")
 }
 
 // ============================================
@@ -45,15 +130,21 @@ model Monitor {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  // Relacionamento com User
-  userId String @map("user_id")
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Campos de status atual (atualizados pelo worker)
+  currentStatus String?   @map("current_status") // "up" | "down" | "degraded"
+  lastCheck     DateTime? @map("last_check")
+  lastLatency   Int?      @map("last_latency") // em milissegundos
+
+  // Relacionamento com Team
+  teamId String @map("team_id")
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   // Relacionamentos
-  checks Check[]
-  alerts Alert[]
+  checks             Check[]
+  alerts             Alert[]
+  statusPageMonitors StatusPageMonitor[]
 
-  @@index([userId])
+  @@index([teamId])
   @@index([active])
   @@map("monitors")
 }
@@ -89,14 +180,14 @@ model AlertChannel {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  // Relacionamento com User
-  userId String @map("user_id")
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Relacionamento com Team
+  teamId String @map("team_id")
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   // Relacionamentos
   alerts Alert[]
 
-  @@index([userId])
+  @@index([teamId])
   @@map("alert_channels")
 }
 
@@ -119,6 +210,92 @@ model Alert {
 
   @@index([monitorId, sentAt])
   @@map("alerts")
+}
+
+// ============================================
+// MODELO: StatusPage (Página de Status Pública)
+// ============================================
+model StatusPage {
+  id          String   @id @default(cuid())
+  slug        String   @unique // URL amigável: /status/[slug]
+  name        String // Nome da página
+  description String? // Descrição opcional
+  logoUrl     String?  @map("logo_url") // URL do logo
+  faviconUrl  String?  @map("favicon_url") // URL do favicon
+  isPublic    Boolean  @default(true) @map("is_public") // Se a página é pública
+
+  // Customização visual
+  primaryColor    String @default("#10b981") @map("primary_color") // Cor primária (emerald-500)
+  backgroundColor String @default("#09090b") @map("background_color") // Cor de fundo (zinc-950)
+
+  // Configurações
+  showUptime  Boolean @default(true) @map("show_uptime") // Mostrar porcentagem de uptime
+  showLatency Boolean @default(true) @map("show_latency") // Mostrar latência
+  showHistory Boolean @default(true) @map("show_history") // Mostrar histórico
+  historyDays Int     @default(90) @map("history_days") // Dias de histórico
+
+  // Domínio customizado (futuro)
+  customDomain String? @map("custom_domain")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relacionamento com Team
+  teamId String @map("team_id")
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  // Relacionamentos
+  monitors StatusPageMonitor[]
+  sections StatusPageSection[]
+
+  @@index([teamId])
+  @@index([slug])
+  @@map("status_pages")
+}
+
+// ============================================
+// MODELO: StatusPageSection (Seção/Grupo de monitors)
+// ============================================
+model StatusPageSection {
+  id           String @id @default(cuid())
+  name         String // Nome da seção (ex: "Serviços Principais", "APIs")
+  displayOrder Int    @default(0) @map("display_order") // Ordem de exibição
+
+  // Relacionamento com StatusPage
+  statusPageId String     @map("status_page_id")
+  statusPage   StatusPage @relation(fields: [statusPageId], references: [id], onDelete: Cascade)
+
+  // Relacionamentos
+  monitors StatusPageMonitor[]
+
+  @@index([statusPageId])
+  @@map("status_page_sections")
+}
+
+// ============================================
+// MODELO: StatusPageMonitor (Relação N:N)
+// ============================================
+model StatusPageMonitor {
+  id           String  @id @default(cuid())
+  displayName  String? @map("display_name") // Nome customizado para exibir
+  displayOrder Int     @default(0) @map("display_order") // Ordem de exibição
+
+  // Relacionamento com StatusPage
+  statusPageId String     @map("status_page_id")
+  statusPage   StatusPage @relation(fields: [statusPageId], references: [id], onDelete: Cascade)
+
+  // Relacionamento com Monitor
+  monitorId String  @map("monitor_id")
+  monitor   Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+
+  // Relacionamento opcional com Section
+  sectionId String?            @map("section_id")
+  section   StatusPageSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+
+  @@unique([statusPageId, monitorId])
+  @@index([statusPageId])
+  @@index([sectionId])
+  @@map("status_page_monitors")
 }
 
 // ============================================

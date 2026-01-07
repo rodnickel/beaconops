@@ -39,8 +39,9 @@ export const updateAlertChannelSchema = z.object({
 })
 
 // Schema para parâmetros de ID
+// Nota: Prisma usa CUID (25 chars) ou CUID2 (variável), então validamos apenas como string não-vazia
 export const alertChannelIdSchema = z.object({
-  id: z.string().cuid(),
+  id: z.string().min(1, 'ID é obrigatório'),
 })
 
 // Schema para query de listagem

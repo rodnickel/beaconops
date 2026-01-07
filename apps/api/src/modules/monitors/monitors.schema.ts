@@ -21,7 +21,7 @@ export const createMonitorSchema = z.object({
   intervalSeconds: z
     .number()
     .int()
-    .min(60, 'Intervalo mínimo é 60 segundos')
+    .min(5, 'Intervalo mínimo é 5 segundos')
     .max(3600, 'Intervalo máximo é 3600 segundos (1 hora)')
     .default(300),
   timeout: z
@@ -45,8 +45,9 @@ export const createMonitorSchema = z.object({
 export const updateMonitorSchema = createMonitorSchema.partial()
 
 // Schema para parâmetros de ID
+// Nota: Prisma usa CUID (25 chars) ou CUID2 (variável), então validamos apenas como string não-vazia
 export const monitorIdSchema = z.object({
-  id: z.string().cuid(),
+  id: z.string().min(1, 'ID é obrigatório'),
 })
 
 // Schema para query de listagem
@@ -76,7 +77,7 @@ export interface MonitorWithStatus {
   alertsEnabled: boolean
   createdAt: Date
   updatedAt: Date
-  userId: string
+  teamId: string
   // Status calculado
   currentStatus?: 'up' | 'down' | 'degraded' | 'unknown'
   lastCheck?: Date

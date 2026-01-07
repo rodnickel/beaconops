@@ -4,7 +4,7 @@ export default function Home() {
       <div className="text-center space-y-6">
         {/* Logo / Título */}
         <h1 className="text-4xl font-bold tracking-tight">
-          Observabilidade
+          BeaconOps
         </h1>
         <p className="text-lg text-gray-600 dark:text-gray-400 max-w-md">
           Plataforma de monitoramento e observabilidade para seus serviços
