@@ -32,22 +32,48 @@ export class AuthService {
     // Gera hash da senha
     const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS)
 
-    // Cria o usuário
-    const user = await prisma.user.create({
-      data: {
-        email: data.email,
-        name: data.name,
-        passwordHash,
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-      },
+    // Gera slug único para o time pessoal
+    const baseSlug = data.name
+      ? data.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 20)
+      : data.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '-')
+    const uniqueSlug = `${baseSlug}-${Date.now().toString(36)}`
+
+    // Cria o usuário e o time pessoal em uma transação
+    const result = await prisma.$transaction(async (tx) => {
+      // Cria o usuário
+      const user = await tx.user.create({
+        data: {
+          email: data.email,
+          name: data.name,
+          passwordHash,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          createdAt: true,
+        },
+      })
+
+      // Cria o time pessoal do usuário
+      await tx.team.create({
+        data: {
+          name: data.name ? `Time de ${data.name}` : 'Meu Time',
+          slug: uniqueSlug,
+          ownerId: user.id,
+          members: {
+            create: {
+              userId: user.id,
+              role: 'ADMIN',
+            },
+          },
+        },
+      })
+
+      return user
     })
 
-    return user
+    return result
   }
 
   // ----------------------------------------

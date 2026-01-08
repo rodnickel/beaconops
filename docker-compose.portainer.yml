@@ -1,9 +1,11 @@
+version: "3.7"
+
 # ============================================
 # Taco - Stack para Portainer + Traefik (Swarm)
 # ============================================
 #
 # Variaveis obrigatorias no Portainer:
-#   - DOMAIN: seu subdominio (ex: taco.italo.br)
+#   - DOMAIN: seu subdominio (ex: taco.movetoup.com.br)
 #   - JWT_SECRET: chave secreta para JWT
 #   - POSTGRES_PASSWORD: senha do banco de dados
 #
@@ -17,91 +19,104 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: taco
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - taco_postgres_data:/var/lib/postgresql/data
     networks:
-      - internal
+      - network_public
     deploy:
+      mode: replicated
       replicas: 1
-      restart_policy:
-        condition: on-failure
+      placement:
+        constraints:
+        - node.role == manager
 
   redis:
     image: redis:7-alpine
     command: redis-server --appendonly yes
     volumes:
-      - redis_data:/data
+      - taco_redis_data:/data
     networks:
-      - internal
+      - network_public
     deploy:
+      mode: replicated
       replicas: 1
-      restart_policy:
-        condition: on-failure
+      placement:
+        constraints:
+        - node.role == manager
 
   api:
     image: ghcr.io/rodnickel/taco-api:latest
     environment:
-      NODE_ENV: production
-      DATABASE_URL: postgresql://taco:${POSTGRES_PASSWORD}@postgres:5432/taco
-      REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET}
-      PORT: 3333
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://taco:${POSTGRES_PASSWORD}@postgres:5432/taco
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET}
+      - PORT=3333
     networks:
-      - internal
-      - traefik-public
+      - network_public
     deploy:
+      mode: replicated
       replicas: 1
-      restart_policy:
-        condition: on-failure
+      placement:
+        constraints:
+        - node.role == manager
       labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.taco-api.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)"
-        - "traefik.http.routers.taco-api.entrypoints=websecure"
-        - "traefik.http.routers.taco-api.tls.certresolver=letsencrypt"
-        - "traefik.http.services.taco-api.loadbalancer.server.port=3333"
-        - "traefik.http.middlewares.taco-api-strip.stripprefix.prefixes=/api"
-        - "traefik.http.routers.taco-api.middlewares=taco-api-strip"
-        - "traefik.http.routers.taco-api.priority=2"
+        - traefik.enable=1
+        - traefik.http.routers.taco-api.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)
+        - traefik.http.routers.taco-api.entrypoints=websecure
+        - traefik.http.routers.taco-api.priority=2
+        - traefik.http.routers.taco-api.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.taco-api.service=taco-api
+        - traefik.http.services.taco-api.loadbalancer.server.port=3333
+        - traefik.http.services.taco-api.loadbalancer.passHostHeader=true
+        - traefik.http.middlewares.taco-api-strip.stripprefix.prefixes=/api
+        - traefik.http.routers.taco-api.middlewares=taco-api-strip
 
   worker:
     image: ghcr.io/rodnickel/taco-api:latest
     entrypoint: ["node"]
     command: ["dist/worker.js"]
     environment:
-      NODE_ENV: production
-      DATABASE_URL: postgresql://taco:${POSTGRES_PASSWORD}@postgres:5432/taco
-      REDIS_URL: redis://redis:6379
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://taco:${POSTGRES_PASSWORD}@postgres:5432/taco
+      - REDIS_URL=redis://redis:6379
     networks:
-      - internal
+      - network_public
     deploy:
+      mode: replicated
       replicas: 1
-      restart_policy:
-        condition: on-failure
+      placement:
+        constraints:
+        - node.role == manager
 
   web:
     image: ghcr.io/rodnickel/taco-web:latest
     environment:
-      NODE_ENV: production
+      - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
+      - PORT=3000
     networks:
-      - internal
-      - traefik-public
+      - network_public
     deploy:
+      mode: replicated
       replicas: 1
-      restart_policy:
-        condition: on-failure
+      placement:
+        constraints:
+        - node.role == manager
       labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.taco-web.rule=Host(`${DOMAIN}`)"
-        - "traefik.http.routers.taco-web.entrypoints=websecure"
-        - "traefik.http.routers.taco-web.tls.certresolver=letsencrypt"
-        - "traefik.http.services.taco-web.loadbalancer.server.port=3000"
-        - "traefik.http.routers.taco-web.priority=1"
+        - traefik.enable=1
+        - traefik.http.routers.taco-web.rule=Host(`${DOMAIN}`)
+        - traefik.http.routers.taco-web.entrypoints=websecure
+        - traefik.http.routers.taco-web.priority=1
+        - traefik.http.routers.taco-web.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.taco-web.service=taco-web
+        - traefik.http.services.taco-web.loadbalancer.server.port=3000
+        - traefik.http.services.taco-web.loadbalancer.passHostHeader=true
 
 volumes:
-  postgres_data:
-  redis_data:
+  taco_postgres_data:
+  taco_redis_data:
 
 networks:
-  internal:
-    driver: overlay
-  traefik-public:
+  network_public:
+    name: network_public
     external: true
