@@ -47,7 +47,7 @@ services:
       PORT: 3333
     networks:
       - internal
-      - traefik
+      - traefik-public
     deploy:
       replicas: 1
       restart_policy:
@@ -83,7 +83,7 @@ services:
       NODE_ENV: production
     networks:
       - internal
-      - traefik
+      - traefik-public
     deploy:
       replicas: 1
       restart_policy:
@@ -103,5 +103,5 @@ volumes:
 networks:
   internal:
     driver: overlay
-  traefik:
+  traefik-public:
     external: true
