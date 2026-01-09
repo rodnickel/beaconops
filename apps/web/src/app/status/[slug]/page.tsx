@@ -300,7 +300,7 @@ function GroupCard({
   group: PublicGroup
   statusPage: PublicStatusPage
 }) {
-  const [isExpanded, setIsExpanded] = useState(group.isExpanded)
+  const [isExpanded, setIsExpanded] = useState(false)
 
   const statusColors: Record<string, string> = {
     up: '#10b981',
