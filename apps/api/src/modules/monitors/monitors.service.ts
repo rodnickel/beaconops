@@ -296,20 +296,28 @@ export async function getMonitorHistory(
     },
   })
 
-  // Agrupa por dia
+  // Agrupa por dia (usando timezone local)
   const dailyData = new Map<string, { up: number; down: number; latencies: number[] }>()
+
+  // Função para formatar data como YYYY-MM-DD em timezone local
+  const formatDateLocal = (d: Date): string => {
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
 
   // Inicializa todos os dias do período
   for (let i = 0; i < days; i++) {
     const date = new Date()
     date.setDate(date.getDate() - (days - 1 - i))
-    const dateKey = date.toISOString().split('T')[0] ?? ''
+    const dateKey = formatDateLocal(date)
     dailyData.set(dateKey, { up: 0, down: 0, latencies: [] })
   }
 
   // Processa os checks
   for (const check of checks) {
-    const dateKey = check.checkedAt.toISOString().split('T')[0] ?? ''
+    const dateKey = formatDateLocal(check.checkedAt)
     const dayData = dailyData.get(dateKey)
 
     if (dayData) {
