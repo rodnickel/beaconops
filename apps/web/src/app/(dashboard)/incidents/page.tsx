@@ -5,7 +5,7 @@ import Link from 'next/link'
 import * as api from '@/lib/api'
 import type { Incident } from '@/lib/api'
 
-// Formata duracao em texto legivel
+// Formata duração em texto legível
 function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds}s`
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m`
@@ -29,9 +29,9 @@ function formatRelativeTime(dateStr: string): string {
   const diffDays = Math.floor(diffMs / 86400000)
 
   if (diffMins < 1) return 'agora'
-  if (diffMins < 60) return `${diffMins}m atras`
-  if (diffHours < 24) return `${diffHours}h atras`
-  if (diffDays < 7) return `${diffDays}d atras`
+  if (diffMins < 60) return `há ${diffMins}min`
+  if (diffHours < 24) return `há ${diffHours}h`
+  if (diffDays < 7) return `há ${diffDays}d`
   return date.toLocaleDateString('pt-BR')
 }
 
@@ -147,7 +147,7 @@ export default function IncidentsPage() {
           <h3 className="text-lg font-medium text-white mb-2">Nenhum incidente</h3>
           <p className="text-zinc-400">
             {filter === 'all'
-              ? 'Todos os monitores estao funcionando normalmente.'
+              ? 'Todos os monitores estão funcionando normalmente.'
               : `Nenhum incidente com status "${statusLabels[filter]}".`}
           </p>
         </div>
@@ -184,7 +184,7 @@ export default function IncidentsPage() {
                         {statusLabels[incident.status]}
                       </span>
                       <span>Iniciado {formatRelativeTime(incident.startedAt)}</span>
-                      <span>Duracao: {formatDuration(incident.duration)}</span>
+                      <span>Duração: {formatDuration(incident.duration)}</span>
                     </div>
 
                     {incident.cause && (
@@ -221,7 +221,7 @@ export default function IncidentsPage() {
                       onClick={() => handleAcknowledge(incident.id)}
                       className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white text-sm font-medium rounded-lg transition-colors"
                     >
-                      Acknowledge
+                      Reconhecer
                     </button>
                   )}
                   {(incident.status === 'ongoing' || incident.status === 'acknowledged') && (

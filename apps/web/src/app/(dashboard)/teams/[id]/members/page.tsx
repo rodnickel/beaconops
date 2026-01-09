@@ -54,11 +54,11 @@ export default function TeamMembersPage() {
       setMembers((prev) =>
         prev.map((m) => (m.user.id === userId ? { ...m, role: newRole } : m))
       )
-      setSuccess('Permissao atualizada com sucesso!')
+      setSuccess('Permissão atualizada com sucesso!')
       await refreshTeams()
     } catch (err) {
       const apiError = err as ApiError
-      setError(apiError.error || 'Erro ao atualizar permissao')
+      setError(apiError.error || 'Erro ao atualizar permissão')
     } finally {
       setUpdatingRole(null)
     }
@@ -93,7 +93,7 @@ export default function TeamMembersPage() {
   const roleDescriptions: Record<TeamRole, string> = {
     ADMIN: 'Gerencia time, membros e recursos',
     EDITOR: 'Cria e edita monitors, alertas e status pages',
-    VIEWER: 'Apenas visualizacao',
+    VIEWER: 'Apenas visualização',
   }
 
   if (loading) {
@@ -111,7 +111,7 @@ export default function TeamMembersPage() {
     return (
       <div className="p-8">
         <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg">
-          Time nao encontrado
+          Time não encontrado
         </div>
       </div>
     )

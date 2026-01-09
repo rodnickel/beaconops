@@ -6,7 +6,7 @@ import Link from 'next/link'
 import * as api from '@/lib/api'
 import type { Incident } from '@/lib/api'
 
-// Formata duracao em texto legivel
+// Formata duração em texto legível
 function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds} segundos`
   if (seconds < 3600) {
@@ -124,7 +124,7 @@ export default function IncidentDetailPage() {
     return (
       <div className="p-8">
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-12 text-center">
-          <h3 className="text-lg font-medium text-white mb-2">Incidente nao encontrado</h3>
+          <h3 className="text-lg font-medium text-white mb-2">Incidente não encontrado</h3>
           <Link href="/incidents" className="text-orange-400 hover:text-orange-300">
             Voltar para incidentes
           </Link>
@@ -192,7 +192,7 @@ export default function IncidentDetailPage() {
                 disabled={updating}
                 className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
               >
-                Acknowledge
+                Reconhecer
               </button>
             )}
             {incident.status !== 'resolved' && (
@@ -212,10 +212,10 @@ export default function IncidentDetailPage() {
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
           <p className="text-sm text-zinc-500 mb-1">Causa</p>
-          <p className="text-white font-medium">{incident.cause || 'Nao especificada'}</p>
+          <p className="text-white font-medium">{incident.cause || 'Não especificada'}</p>
         </div>
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-          <p className="text-sm text-zinc-500 mb-1">Duracao</p>
+          <p className="text-sm text-zinc-500 mb-1">Duração</p>
           <p className="text-white font-medium">
             {incident.status === 'resolved' ? formatDuration(incident.duration) : 'Em andamento'}
           </p>
@@ -253,13 +253,13 @@ export default function IncidentDetailPage() {
       {/* Adicionar update */}
       {incident.status !== 'resolved' && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Adicionar atualizacao</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">Adicionar atualização</h3>
           <div className="flex gap-3">
             <input
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Descreva o que esta sendo feito..."
+              placeholder="Descreva o que está sendo feito..."
               className="flex-1 px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500"
             />
             <button
@@ -275,7 +275,7 @@ export default function IncidentDetailPage() {
 
       {/* Timeline de updates */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-6">Historico</h3>
+        <h3 className="text-lg font-semibold text-white mb-6">Histórico</h3>
 
         {incident.updates && incident.updates.length > 0 ? (
           <div className="relative">
@@ -314,7 +314,7 @@ export default function IncidentDetailPage() {
             </div>
           </div>
         ) : (
-          <p className="text-zinc-500">Nenhuma atualizacao ainda.</p>
+          <p className="text-zinc-500">Nenhuma atualização ainda.</p>
         )}
       </div>
     </div>

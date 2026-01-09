@@ -104,7 +104,7 @@ export default function TeamSettingsPage() {
     return (
       <div className="p-8">
         <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg">
-          Time nao encontrado
+          Time não encontrado
         </div>
       </div>
     )
@@ -127,8 +127,8 @@ export default function TeamSettingsPage() {
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">Configuracoes do Time</h1>
-        <p className="text-zinc-400 mt-1">Gerencie as configuracoes do time {team.name}</p>
+        <h1 className="text-2xl font-bold text-white">Configurações do Time</h1>
+        <p className="text-zinc-400 mt-1">Gerencie as configurações do time {team.name}</p>
       </div>
 
       {/* Navigation Tabs */}
@@ -245,7 +245,7 @@ export default function TeamSettingsPage() {
                   Salvando...
                 </>
               ) : (
-                'Salvar alteracoes'
+                'Salvar alterações'
               )}
             </button>
           </div>
@@ -258,7 +258,7 @@ export default function TeamSettingsPage() {
         onCancel={() => setShowDeleteModal(false)}
         onConfirm={handleDelete}
         title="Deletar time"
-        message={`Tem certeza que deseja deletar o time "${team.name}"? Esta acao nao pode ser desfeita e todos os monitores, alertas e status pages serao perdidos.`}
+        message={`Tem certeza que deseja deletar o time "${team.name}"? Esta ação não pode ser desfeita e todos os monitores, alertas e status pages serão perdidos.`}
         confirmText={deleting ? 'Deletando...' : 'Deletar'}
         confirmVariant="danger"
         loading={deleting}

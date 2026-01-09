@@ -128,7 +128,7 @@ export default function TeamInvitesPage() {
     return (
       <div className="p-8">
         <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg">
-          Time nao encontrado
+          Time não encontrado
         </div>
       </div>
     )
@@ -138,7 +138,7 @@ export default function TeamInvitesPage() {
     return (
       <div className="p-8">
         <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 px-4 py-3 rounded-lg">
-          Voce nao tem permissao para gerenciar convites
+          Você não tem permissão para gerenciar convites
         </div>
       </div>
     )
@@ -282,7 +282,7 @@ export default function TeamInvitesPage() {
           {inviteType === 'link' && (
             <div className="mb-4">
               <label className="block text-sm font-medium text-zinc-300 mb-2">
-                Numero maximo de usos
+                Número máximo de usos
               </label>
               <input
                 type="number"
@@ -298,14 +298,14 @@ export default function TeamInvitesPage() {
           {/* Role */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-zinc-300 mb-2">
-              Permissao
+              Permissão
             </label>
             <select
               value={inviteRole}
               onChange={(e) => setInviteRole(e.target.value as TeamRole)}
               className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors"
             >
-              <option value="VIEWER">Visualizador - Apenas visualizacao</option>
+              <option value="VIEWER">Visualizador - Apenas visualização</option>
               <option value="EDITOR">Editor - Cria e edita recursos</option>
               <option value="ADMIN">Administrador - Gerencia o time</option>
             </select>
@@ -427,7 +427,7 @@ export default function TeamInvitesPage() {
         onCancel={() => setInviteToRevoke(null)}
         onConfirm={handleRevokeInvite}
         title="Revogar convite"
-        message="Tem certeza que deseja revogar este convite? O link nao podera mais ser usado."
+        message="Tem certeza que deseja revogar este convite? O link não poderá mais ser usado."
         confirmText={revoking ? 'Revogando...' : 'Revogar'}
         confirmVariant="danger"
         loading={revoking}
