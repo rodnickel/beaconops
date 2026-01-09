@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -22,6 +22,20 @@ function ChannelTypeIcon({ type }: { type: AlertChannel['type'] }) {
       </svg>
     )
   }
+  if (type === 'whatsapp') {
+    return (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+      </svg>
+    )
+  }
+  if (type === 'telegram') {
+    return (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+      </svg>
+    )
+  }
   // slack
   return (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -31,16 +45,20 @@ function ChannelTypeIcon({ type }: { type: AlertChannel['type'] }) {
 }
 
 function ChannelTypeBadge({ type }: { type: AlertChannel['type'] }) {
-  const styles = {
+  const styles: Record<AlertChannel['type'], string> = {
     email: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
     webhook: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
     slack: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    whatsapp: 'bg-green-500/10 text-green-400 border-green-500/20',
+    telegram: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
   }
 
-  const labels = {
+  const labels: Record<AlertChannel['type'], string> = {
     email: 'Email',
     webhook: 'Webhook',
     slack: 'Slack',
+    whatsapp: 'WhatsApp',
+    telegram: 'Telegram',
   }
 
   return (
@@ -51,13 +69,43 @@ function ChannelTypeBadge({ type }: { type: AlertChannel['type'] }) {
   )
 }
 
+function getChannelDescription(channel: AlertChannel): string {
+  const config = channel.config as Record<string, string>
+  switch (channel.type) {
+    case 'email':
+      return config.email || config.to || ''
+    case 'webhook':
+      return config.url || ''
+    case 'slack':
+      return 'Canal do Slack configurado'
+    case 'whatsapp':
+      return config.phone ? `+${config.phone}` : ''
+    case 'telegram':
+      return `Chat ID: ${config.chatId || ''}`
+    default:
+      return ''
+  }
+}
+
+function getChannelIconStyle(type: AlertChannel['type']): string {
+  const styles: Record<AlertChannel['type'], string> = {
+    email: 'bg-blue-500/10 text-blue-400',
+    webhook: 'bg-purple-500/10 text-purple-400',
+    slack: 'bg-amber-500/10 text-amber-400',
+    whatsapp: 'bg-green-500/10 text-green-400',
+    telegram: 'bg-sky-500/10 text-sky-400',
+  }
+  return styles[type]
+}
+
 export default function AlertsPage() {
   const router = useRouter()
   const [channels, setChannels] = useState<AlertChannel[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; channel: AlertChannel | null }>({ open: false, channel: null })
-  const [alertModal, setAlertModal] = useState<{ open: boolean; message: string }>({ open: false, message: '' })
+  const [alertModal, setAlertModal] = useState<{ open: boolean; message: string; variant: 'success' | 'error' }>({ open: false, message: '', variant: 'error' })
+  const [testingChannel, setTestingChannel] = useState<string | null>(null)
 
   useEffect(() => {
     loadChannels()
@@ -85,7 +133,20 @@ export default function AlertsPage() {
       setChannels(channels.map(c => c.id === channel.id ? updated : c))
     } catch (err) {
       const apiError = err as ApiError
-      setAlertModal({ open: true, message: apiError.error || 'Erro ao atualizar canal' })
+      setAlertModal({ open: true, message: apiError.error || 'Erro ao atualizar canal', variant: 'error' })
+    }
+  }
+
+  async function handleTestChannel(channel: AlertChannel) {
+    setTestingChannel(channel.id)
+    try {
+      await api.testAlertChannel(channel.id)
+      setAlertModal({ open: true, message: 'Notificação de teste enviada com sucesso!', variant: 'success' })
+    } catch (err) {
+      const apiError = err as ApiError
+      setAlertModal({ open: true, message: apiError.error || 'Erro ao enviar notificação de teste', variant: 'error' })
+    } finally {
+      setTestingChannel(null)
     }
   }
 
@@ -103,7 +164,7 @@ export default function AlertsPage() {
       setChannels(channels.filter(c => c.id !== channelToDelete.id))
     } catch (err) {
       const apiError = err as ApiError
-      setAlertModal({ open: true, message: apiError.error || 'Erro ao deletar canal' })
+      setAlertModal({ open: true, message: apiError.error || 'Erro ao deletar canal', variant: 'error' })
     }
   }
 
@@ -174,11 +235,7 @@ export default function AlertsPage() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    channel.type === 'email' ? 'bg-blue-500/10 text-blue-400' :
-                    channel.type === 'webhook' ? 'bg-purple-500/10 text-purple-400' :
-                    'bg-amber-500/10 text-amber-400'
-                  }`}>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${getChannelIconStyle(channel.type)}`}>
                     <ChannelTypeIcon type={channel.type} />
                   </div>
                   <div>
@@ -190,13 +247,31 @@ export default function AlertsPage() {
                       )}
                     </div>
                     <p className="text-sm text-zinc-500 mt-1">
-                      {channel.type === 'email' && (channel.config as { to: string }).to}
-                      {channel.type === 'webhook' && (channel.config as { url: string }).url}
-                      {channel.type === 'slack' && 'Canal do Slack configurado'}
+                      {getChannelDescription(channel)}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleTestChannel(channel)}
+                    disabled={testingChannel === channel.id || !channel.active}
+                    className="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                    title={!channel.active ? 'Ative o canal para testar' : 'Enviar notificação de teste'}
+                  >
+                    {testingChannel === channel.id ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                        </svg>
+                        Testar
+                      </>
+                    )}
+                  </button>
                   <button
                     onClick={() => handleToggleActive(channel)}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
@@ -241,10 +316,10 @@ export default function AlertsPage() {
       {/* Alert Modal */}
       <AlertModal
         isOpen={alertModal.open}
-        title="Erro"
+        title={alertModal.variant === 'success' ? 'Sucesso' : 'Erro'}
         message={alertModal.message}
-        variant="error"
-        onClose={() => setAlertModal({ open: false, message: '' })}
+        variant={alertModal.variant}
+        onClose={() => setAlertModal({ open: false, message: '', variant: 'error' })}
       />
     </div>
   )

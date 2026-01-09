@@ -6,9 +6,10 @@ import type { DailyUptimeData } from '@/lib/api'
 interface UptimeBarProps {
   history: DailyUptimeData[]
   uptimePercentage?: number
+  currentStatus?: 'up' | 'down' | 'degraded' | 'unknown' | null
 }
 
-export function UptimeBar({ history, uptimePercentage }: UptimeBarProps) {
+export function UptimeBar({ history, uptimePercentage, currentStatus }: UptimeBarProps) {
   const [hoveredDay, setHoveredDay] = useState<DailyUptimeData | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
 
@@ -76,9 +77,17 @@ export function UptimeBar({ history, uptimePercentage }: UptimeBarProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className={`w-3 h-3 rounded-full ${calculatedUptime >= 99 ? 'bg-emerald-500' : calculatedUptime >= 95 ? 'bg-amber-500' : 'bg-red-500'}`} />
+          <div className={`w-3 h-3 rounded-full ${
+            currentStatus === 'up' ? 'bg-emerald-500' :
+            currentStatus === 'down' ? 'bg-red-500' :
+            currentStatus === 'degraded' ? 'bg-amber-500' :
+            'bg-zinc-500'
+          }`} />
           <span className="text-white font-medium">
-            {history.length > 0 ? history[history.length - 1]?.status === 'up' ? 'Operacional' : 'Com problemas' : 'Aguardando dados'}
+            {currentStatus === 'up' ? 'Operacional' :
+             currentStatus === 'down' ? 'Fora do ar' :
+             currentStatus === 'degraded' ? 'Degradado' :
+             'Aguardando dados'}
           </span>
         </div>
         <span className="text-zinc-400 text-sm">

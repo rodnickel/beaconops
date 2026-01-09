@@ -21,10 +21,7 @@ export async function incidentsRoutes(fastify: FastifyInstance) {
     {
       preHandler: [requireTeamAccess],
     },
-    async (
-      request: FastifyRequest<{ Querystring: Record<string, string> }>,
-      reply: FastifyReply
-    ) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       const teamId = request.teamContext!.teamId
       const queryResult = listIncidentsQuerySchema.safeParse(request.query)
 
@@ -64,10 +61,7 @@ export async function incidentsRoutes(fastify: FastifyInstance) {
     {
       preHandler: [requireTeamAccess],
     },
-    async (
-      request: FastifyRequest<{ Params: { id: string } }>,
-      reply: FastifyReply
-    ) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       const teamId = request.teamContext!.teamId
       const paramsResult = incidentIdSchema.safeParse(request.params)
 
@@ -102,12 +96,9 @@ export async function incidentsRoutes(fastify: FastifyInstance) {
     {
       preHandler: [requireTeamRole('VIEWER')], // Qualquer membro pode acknowledgar
     },
-    async (
-      request: FastifyRequest<{ Params: { id: string } }>,
-      reply: FastifyReply
-    ) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       const teamId = request.teamContext!.teamId
-      const userId = request.user!.id
+      const userId = request.user!.sub
       const paramsResult = incidentIdSchema.safeParse(request.params)
 
       if (!paramsResult.success) {
@@ -141,10 +132,7 @@ export async function incidentsRoutes(fastify: FastifyInstance) {
     {
       preHandler: [requireTeamRole('EDITOR')], // Editor ou Admin pode resolver
     },
-    async (
-      request: FastifyRequest<{ Params: { id: string }; Body: { message?: string } }>,
-      reply: FastifyReply
-    ) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       const teamId = request.teamContext!.teamId
       const paramsResult = incidentIdSchema.safeParse(request.params)
       const bodyResult = resolveIncidentSchema.safeParse(request.body || {})
@@ -180,13 +168,7 @@ export async function incidentsRoutes(fastify: FastifyInstance) {
     {
       preHandler: [requireTeamRole('EDITOR')],
     },
-    async (
-      request: FastifyRequest<{
-        Params: { id: string }
-        Body: { message: string; status?: string }
-      }>,
-      reply: FastifyReply
-    ) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       const teamId = request.teamContext!.teamId
       const paramsResult = incidentIdSchema.safeParse(request.params)
       const bodyResult = addIncidentUpdateSchema.safeParse(request.body)

@@ -35,7 +35,7 @@ export class AuthService {
     // Gera slug único para o time pessoal
     const baseSlug = data.name
       ? data.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 20)
-      : data.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '-')
+      : (data.email.split('@')[0] ?? 'user').toLowerCase().replace(/[^a-z0-9]/g, '-')
     const uniqueSlug = `${baseSlug}-${Date.now().toString(36)}`
 
     // Cria o usuário e o time pessoal em uma transação

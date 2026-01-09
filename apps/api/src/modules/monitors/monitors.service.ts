@@ -8,6 +8,7 @@ import type {
   UpdateMonitorInput,
   ListMonitorsQuery,
   MonitorWithStatus,
+  RequestHeader,
 } from './monitors.schema.js'
 
 // ============================================
@@ -16,10 +17,14 @@ import type {
 // ============================================
 
 export async function createMonitor(teamId: string, data: CreateMonitorInput) {
+  // Converte requestHeaders para formato JSON aceito pelo Prisma
+  const { requestHeaders, escalationPolicyId, ...restData } = data
   const monitor = await prisma.monitor.create({
     data: {
-      ...data,
+      ...restData,
       teamId,
+      requestHeaders: requestHeaders as object | undefined,
+      escalationPolicyId: escalationPolicyId ?? null,
     },
   })
 
@@ -78,16 +83,28 @@ export async function updateMonitor(
     return null
   }
 
+  // Converte requestHeaders e escalationPolicyId para formato Prisma
+  const { requestHeaders, escalationPolicyId, ...restData } = data
+  const updateData: Record<string, unknown> = { ...restData }
+  if (requestHeaders !== undefined) {
+    updateData.requestHeaders = requestHeaders as object | null
+  }
+  if (escalationPolicyId !== undefined) {
+    updateData.escalationPolicyId = escalationPolicyId ?? null
+  }
+
   const monitor = await prisma.monitor.update({
     where: { id },
-    data,
+    data: updateData,
   })
 
   // Atualiza agendamento baseado no status
   if (data.active !== undefined || data.intervalSeconds !== undefined) {
     await unscheduleMonitorCheck(id)
     if (monitor.active) {
-      await scheduleMonitorCheck(id)
+      // Executa imediatamente se o monitor foi ativado (estava inativo antes)
+      const wasReactivated = data.active === true && existing.active === false
+      await scheduleMonitorCheck(id, wasReactivated)
     }
   }
 
@@ -155,10 +172,11 @@ export async function getMonitorWithStatus(
   const uptimePercentage = totalChecks > 0 ? (upChecks / totalChecks) * 100 : undefined
 
   // Remove os checks do retorno para não sobrecarregar
-  const { checks, ...monitorData } = monitor
+  const { checks, requestHeaders, ...monitorData } = monitor
 
   return {
     ...monitorData,
+    requestHeaders: requestHeaders as RequestHeader[] | null,
     currentStatus,
     lastCheck: lastCheck?.checkedAt,
     lastLatency: lastCheck?.latency ?? undefined,
@@ -212,10 +230,11 @@ export async function findAllMonitorsWithStatus(
     const upChecks = monitor.checks.filter((c) => c.status === 'up').length
     const uptimePercentage = totalChecks > 0 ? (upChecks / totalChecks) * 100 : undefined
 
-    const { checks, ...monitorData } = monitor
+    const { checks, requestHeaders, ...monitorData } = monitor
 
     return {
       ...monitorData,
+      requestHeaders: requestHeaders as RequestHeader[] | null,
       currentStatus,
       lastCheck: lastCheck?.checkedAt,
       lastLatency: lastCheck?.latency ?? undefined,
@@ -284,13 +303,13 @@ export async function getMonitorHistory(
   for (let i = 0; i < days; i++) {
     const date = new Date()
     date.setDate(date.getDate() - (days - 1 - i))
-    const dateKey = date.toISOString().split('T')[0]
+    const dateKey = date.toISOString().split('T')[0] ?? ''
     dailyData.set(dateKey, { up: 0, down: 0, latencies: [] })
   }
 
   // Processa os checks
   for (const check of checks) {
-    const dateKey = check.checkedAt.toISOString().split('T')[0]
+    const dateKey = check.checkedAt.toISOString().split('T')[0] ?? ''
     const dayData = dailyData.get(dateKey)
 
     if (dayData) {

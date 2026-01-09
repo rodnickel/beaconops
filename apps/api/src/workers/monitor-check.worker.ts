@@ -315,8 +315,8 @@ async function triggerAlerts(
 
         // Envia a notificação
         await sendNotification(
-          channel.type as 'email' | 'webhook' | 'slack',
-          channel.config as Record<string, string>,
+          channel.type as 'email' | 'webhook' | 'slack' | 'whatsapp' | 'telegram',
+          channel.config as Parameters<typeof sendNotification>[1],
           {
             monitorName: monitor.name,
             monitorUrl: monitor.url,
@@ -381,7 +381,7 @@ export async function scheduleAllMonitorChecks() {
 }
 
 // Função para adicionar um monitor ao agendamento
-export async function scheduleMonitorCheck(monitorId: string) {
+export async function scheduleMonitorCheck(monitorId: string, runImmediately: boolean = true) {
   const monitor = await prisma.monitor.findUnique({
     where: { id: monitorId },
   })
@@ -390,6 +390,18 @@ export async function scheduleMonitorCheck(monitorId: string) {
     return
   }
 
+  // Executa verificação imediata se solicitado
+  if (runImmediately) {
+    await monitorCheckQueue.add(
+      `immediate-check-${monitor.id}`,
+      { monitorId: monitor.id },
+      {
+        jobId: `immediate-${monitor.id}-${Date.now()}`,
+      }
+    )
+  }
+
+  // Agenda verificações recorrentes
   await monitorCheckQueue.add(
     `check-${monitor.id}`,
     { monitorId: monitor.id },

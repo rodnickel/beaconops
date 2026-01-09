@@ -1,8 +1,14 @@
 import { prisma } from '../../lib/prisma.js'
+import { sendNotification } from '../../services/notification.service.js'
 import type {
   CreateAlertChannelInput,
   UpdateAlertChannelInput,
   ListAlertChannelsQuery,
+  EmailConfig,
+  WebhookConfig,
+  SlackConfig,
+  WhatsAppConfig,
+  TelegramConfig,
 } from './alerts.schema.js'
 
 // ============================================
@@ -132,4 +138,42 @@ export async function findLastAlert(monitorId: string) {
     where: { monitorId },
     orderBy: { sentAt: 'desc' },
   })
+}
+
+// Envia notificação de teste para um canal
+export async function sendTestNotification(channel: {
+  id: string
+  type: string
+  config: unknown
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const testPayload = {
+      monitorName: 'Monitor de Teste',
+      monitorUrl: 'https://exemplo.com',
+      status: 'up' as const,
+      message: 'Esta é uma notificação de teste do Taco Monitoring. Se você recebeu esta mensagem, o canal está configurado corretamente!',
+      checkedAt: new Date(),
+      latency: 123,
+    }
+
+    const config = channel.config as EmailConfig | WebhookConfig | SlackConfig | WhatsAppConfig | TelegramConfig
+
+    const success = await sendNotification(
+      channel.type as 'email' | 'webhook' | 'slack' | 'whatsapp' | 'telegram',
+      config,
+      testPayload
+    )
+
+    if (!success) {
+      return { success: false, error: 'Falha ao enviar notificação' }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Erro ao enviar notificação de teste:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Erro desconhecido',
+    }
+  }
 }

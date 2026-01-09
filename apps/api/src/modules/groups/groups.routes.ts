@@ -52,10 +52,7 @@ export async function groupsRoutes(fastify: FastifyInstance) {
     {
       preHandler: [requireTeamAccess],
     },
-    async (
-      request: FastifyRequest<{ Params: { id: string } }>,
-      reply: FastifyReply
-    ) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       const teamId = request.teamContext!.teamId
       const paramsResult = groupIdSchema.safeParse(request.params)
 
@@ -112,10 +109,7 @@ export async function groupsRoutes(fastify: FastifyInstance) {
     {
       preHandler: [requireTeamRole('EDITOR')],
     },
-    async (
-      request: FastifyRequest<{ Params: { id: string } }>,
-      reply: FastifyReply
-    ) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       const teamId = request.teamContext!.teamId
       const paramsResult = groupIdSchema.safeParse(request.params)
       const bodyResult = updateGroupSchema.safeParse(request.body)
@@ -160,10 +154,7 @@ export async function groupsRoutes(fastify: FastifyInstance) {
     {
       preHandler: [requireTeamRole('ADMIN')],
     },
-    async (
-      request: FastifyRequest<{ Params: { id: string } }>,
-      reply: FastifyReply
-    ) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       const teamId = request.teamContext!.teamId
       const paramsResult = groupIdSchema.safeParse(request.params)
 
@@ -195,10 +186,7 @@ export async function groupsRoutes(fastify: FastifyInstance) {
     {
       preHandler: [requireTeamRole('EDITOR')],
     },
-    async (
-      request: FastifyRequest<{ Params: { id: string } }>,
-      reply: FastifyReply
-    ) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       const teamId = request.teamContext!.teamId
       const paramsResult = groupIdSchema.safeParse(request.params)
       const bodyResult = addMonitorsToGroupSchema.safeParse(request.body)
@@ -243,10 +231,7 @@ export async function groupsRoutes(fastify: FastifyInstance) {
     {
       preHandler: [requireTeamRole('EDITOR')],
     },
-    async (
-      request: FastifyRequest<{ Params: { id: string } }>,
-      reply: FastifyReply
-    ) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       const teamId = request.teamContext!.teamId
       const paramsResult = groupIdSchema.safeParse(request.params)
       const bodyResult = removeMonitorsFromGroupSchema.safeParse(request.body)

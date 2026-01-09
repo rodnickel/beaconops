@@ -20,6 +20,7 @@ const envSchema = z.object({
   // WhatsApp (Evolution API)
   EVOLUTION_API_URL: z.string().url().optional(),
   EVOLUTION_API_KEY: z.string().optional(),
+  EVOLUTION_INSTANCE_NAME: z.string().optional(),
 
   // Telegram Bot
   TELEGRAM_BOT_TOKEN: z.string().optional(),

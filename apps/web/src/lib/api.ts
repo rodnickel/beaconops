@@ -448,7 +448,7 @@ export async function getMonitorSSL(id: string) {
 export interface AlertChannel {
   id: string
   name: string
-  type: 'email' | 'webhook' | 'slack'
+  type: 'email' | 'webhook' | 'slack' | 'whatsapp' | 'telegram'
   config: Record<string, string>
   active: boolean
   createdAt: string
@@ -464,7 +464,7 @@ export interface AlertChannelListResponse {
 
 export interface CreateAlertChannelData {
   name: string
-  type: 'email' | 'webhook' | 'slack'
+  type: 'email' | 'webhook' | 'slack' | 'whatsapp' | 'telegram'
   config: Record<string, string>
   active?: boolean
 }
@@ -511,6 +511,12 @@ export async function updateAlertChannel(id: string, data: UpdateAlertChannelDat
 export async function deleteAlertChannel(id: string) {
   return request<void>(`/alerts/channels/${id}`, {
     method: 'DELETE',
+  })
+}
+
+export async function testAlertChannel(id: string) {
+  return request<{ success: boolean; message: string }>(`/alerts/channels/${id}/test`, {
+    method: 'POST',
   })
 }
 

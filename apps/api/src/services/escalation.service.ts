@@ -286,7 +286,7 @@ async function processEscalation(escalation: {
 
   await sendNotification(
     currentLevelConfig.channel.type as 'email' | 'webhook' | 'slack' | 'whatsapp' | 'telegram',
-    currentLevelConfig.channel.config as Record<string, string>,
+    currentLevelConfig.channel.config as Parameters<typeof sendNotification>[1],
     payload
   )
 

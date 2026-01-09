@@ -11,8 +11,8 @@ const QUEUE_NAME = 'ssl-checks'
 // Intervalo padrão: a cada 12 horas
 const CHECK_INTERVAL = 12 * 60 * 60 * 1000
 
-// Dias de antecedência para alertar sobre expiração
-const ALERT_DAYS_BEFORE = 30
+// Dias de antecedência para alertar sobre expiração (alerta proativo)
+const ALERT_DAYS_BEFORE = 3
 
 // Fila para verificações SSL
 export const sslCheckQueue = new Queue(QUEUE_NAME, {

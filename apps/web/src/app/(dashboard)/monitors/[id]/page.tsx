@@ -317,7 +317,7 @@ export default function MonitorDetailPage({ params }: { params: Promise<{ id: st
       {history.length > 0 && (
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-white mb-4">Histórico de Uptime</h2>
-          <UptimeBar history={history} />
+          <UptimeBar history={history} currentStatus={monitor.currentStatus} />
         </div>
       )}
 

@@ -349,12 +349,12 @@ async function prepareMonitorData(
     for (let i = 0; i < statusPage.historyDays; i++) {
       const date = new Date()
       date.setDate(date.getDate() - (statusPage.historyDays - 1 - i))
-      const dateKey = date.toISOString().split('T')[0]
+      const dateKey = date.toISOString().split('T')[0] ?? ''
       dailyData.set(dateKey, { up: 0, down: 0 })
     }
 
     for (const check of monitor.checks) {
-      const dateKey = check.checkedAt.toISOString().split('T')[0]
+      const dateKey = check.checkedAt.toISOString().split('T')[0] ?? ''
       const dayData = dailyData.get(dateKey)
       if (dayData) {
         if (check.status === 'up') {
@@ -403,7 +403,13 @@ export async function getPublicStatusPage(slug: string): Promise<PublicStatusPag
         orderBy: { displayOrder: 'asc' },
         include: {
           monitor: {
-            include: {
+            select: {
+              id: true,
+              name: true,
+              active: true,
+              currentStatus: true,
+              lastCheck: true,
+              lastLatency: true,
               checks: {
                 orderBy: { checkedAt: 'desc' },
                 take: 100,
@@ -418,6 +424,9 @@ export async function getPublicStatusPage(slug: string): Promise<PublicStatusPag
           group: {
             include: {
               monitors: {
+                where: {
+                  active: true, // Filtra apenas monitores ativos
+                },
                 include: {
                   checks: {
                     orderBy: { checkedAt: 'desc' },
@@ -444,12 +453,16 @@ export async function getPublicStatusPage(slug: string): Promise<PublicStatusPag
     }
   }
 
-  // Agrupa monitors por seção (excluindo os que estão em grupos)
+  // Agrupa monitors por seção (excluindo os que estão em grupos e os inativos)
   const monitorsBySection = new Map<string | null, typeof statusPage.monitors>()
 
   for (const spm of statusPage.monitors) {
     // Pula monitors que já estão em um grupo
     if (monitorsInGroups.has(spm.monitor.id)) {
+      continue
+    }
+    // Pula monitors inativos
+    if (!spm.monitor.active) {
       continue
     }
     const sectionId = spm.sectionId
@@ -658,7 +671,7 @@ export async function getWidgetData(slug: string) {
       monitors: {
         select: {
           monitor: {
-            select: { currentStatus: true },
+            select: { currentStatus: true, active: true },
           },
         },
       },
@@ -667,6 +680,7 @@ export async function getWidgetData(slug: string) {
           group: {
             select: {
               monitors: {
+                where: { active: true },
                 select: { currentStatus: true },
               },
             },
@@ -680,11 +694,14 @@ export async function getWidgetData(slug: string) {
     return null
   }
 
-  // Coleta todos os status dos monitors
+  // Coleta todos os status dos monitors (apenas ativos)
   const allStatuses: (string | null)[] = []
 
   for (const spm of statusPage.monitors) {
-    allStatuses.push(spm.monitor.currentStatus)
+    // Filtra apenas monitores ativos
+    if (spm.monitor.active) {
+      allStatuses.push(spm.monitor.currentStatus)
+    }
   }
 
   for (const spg of statusPage.groups) {

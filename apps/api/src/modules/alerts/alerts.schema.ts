@@ -22,9 +22,7 @@ const slackConfigSchema = z.object({
 
 const whatsappConfigSchema = z.object({
   phone: z.string().min(10, 'Telefone deve ter no mínimo 10 dígitos'), // Ex: 5511999999999
-  instanceName: z.string().min(1, 'Nome da instância é obrigatório'), // Nome da instância na Evolution API
-  evolutionApiUrl: z.string().url('URL da Evolution API inválida').optional(), // Se não informado, usa env
-  evolutionApiKey: z.string().optional(), // Se não informado, usa env
+  // instanceName, evolutionApiUrl e evolutionApiKey são configurados no servidor via env
 })
 
 const telegramConfigSchema = z.object({

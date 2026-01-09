@@ -227,13 +227,15 @@ async function sendSSLAlert(
         await createAlert(monitor.id, channel.id, 'down', message)
 
         // Envia notificação
+        // Para certificados expirando, é apenas um alerta proativo (status 'warning')
+        // Apenas certificados já expirados ou inválidos são 'down'
         await sendNotification(
           channel.type as 'email' | 'webhook' | 'slack' | 'whatsapp' | 'telegram',
-          channel.config as Record<string, string>,
+          channel.config as Parameters<typeof sendNotification>[1],
           {
             monitorName: monitor.name,
             monitorUrl: monitor.url,
-            status: type === 'expiring' ? 'degraded' : 'down',
+            status: type === 'expiring' ? 'warning' : 'down',
             message,
             checkedAt: new Date(),
           }

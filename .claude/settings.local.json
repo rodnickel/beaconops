@@ -96,7 +96,12 @@
       "Bash(pnpm run build:*)",
       "Bash(npm run build:*)",
       "Bash(npx tsc:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(pnpm --filter @taco/api exec tsc:*)",
+      "Bash(pnpm --filter @taco/web exec tsc:*)",
+      "Bash(curl:*)"
     ]
   }
 }

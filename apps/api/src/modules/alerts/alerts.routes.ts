@@ -147,4 +147,40 @@ export async function alertsRoutes(app: FastifyInstance) {
 
     return reply.status(204).send()
   })
+
+  // POST /alerts/channels/:id/test - Enviar notificação de teste (requer EDITOR)
+  app.post('/channels/:id/test', { onRequest: [editorAuth] }, async (request, reply) => {
+    const parseResult = alertChannelIdSchema.safeParse(request.params)
+
+    if (!parseResult.success) {
+      return reply.status(400).send({
+        error: 'ID inválido',
+      })
+    }
+
+    const channel = await alertsService.findAlertChannelById(
+      request.teamContext!.teamId,
+      parseResult.data.id
+    )
+
+    if (!channel) {
+      return reply.status(404).send({
+        error: 'Canal não encontrado',
+      })
+    }
+
+    const result = await alertsService.sendTestNotification(channel)
+
+    if (!result.success) {
+      return reply.status(500).send({
+        error: 'Falha ao enviar notificação de teste',
+        details: result.error,
+      })
+    }
+
+    return reply.send({
+      success: true,
+      message: 'Notificação de teste enviada com sucesso',
+    })
+  })
 }

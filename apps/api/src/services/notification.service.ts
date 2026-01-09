@@ -18,7 +18,7 @@ const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null
 interface NotificationPayload {
   monitorName: string
   monitorUrl: string
-  status: 'up' | 'down' | 'degraded'
+  status: 'up' | 'down' | 'degraded' | 'warning'
   message: string
   checkedAt: Date
   latency?: number
@@ -30,7 +30,7 @@ export async function sendEmailNotification(
   payload: NotificationPayload
 ): Promise<boolean> {
   const statusEmoji = payload.status === 'up' ? '✅' : payload.status === 'down' ? '🔴' : '⚠️'
-  const statusText = payload.status === 'up' ? 'Online' : payload.status === 'down' ? 'Offline' : 'Degradado'
+  const statusText = payload.status === 'up' ? 'Online' : payload.status === 'down' ? 'Offline' : payload.status === 'warning' ? 'Aviso' : 'Degradado'
 
   if (!resend) {
     console.warn('⚠️ RESEND_API_KEY não configurada, email não enviado')
@@ -140,7 +140,7 @@ export async function sendSlackNotification(
   payload: NotificationPayload
 ): Promise<boolean> {
   const statusEmoji = payload.status === 'up' ? ':white_check_mark:' : payload.status === 'down' ? ':red_circle:' : ':warning:'
-  const statusText = payload.status === 'up' ? 'Online' : payload.status === 'down' ? 'Offline' : 'Degradado'
+  const statusText = payload.status === 'up' ? 'Online' : payload.status === 'down' ? 'Offline' : payload.status === 'warning' ? 'Aviso' : 'Degradado'
   const color = payload.status === 'up' ? '#10b981' : payload.status === 'down' ? '#ef4444' : '#f59e0b'
 
   try {
@@ -198,14 +198,15 @@ export async function sendWhatsAppNotification(
   payload: NotificationPayload
 ): Promise<boolean> {
   const statusEmoji = payload.status === 'up' ? '✅' : payload.status === 'down' ? '🔴' : '⚠️'
-  const statusText = payload.status === 'up' ? 'Online' : payload.status === 'down' ? 'Offline' : 'Degradado'
+  const statusText = payload.status === 'up' ? 'Online' : payload.status === 'down' ? 'Offline' : payload.status === 'warning' ? 'Aviso' : 'Degradado'
 
-  // Usa config do canal ou variáveis de ambiente
-  const evolutionUrl = config.evolutionApiUrl || env.EVOLUTION_API_URL
-  const evolutionKey = config.evolutionApiKey || env.EVOLUTION_API_KEY
+  // Usa variáveis de ambiente para Evolution API
+  const evolutionUrl = env.EVOLUTION_API_URL
+  const evolutionKey = env.EVOLUTION_API_KEY
+  const instanceName = env.EVOLUTION_INSTANCE_NAME
 
-  if (!evolutionUrl || !evolutionKey) {
-    console.warn('⚠️ EVOLUTION_API_URL ou EVOLUTION_API_KEY não configurada, WhatsApp não enviado')
+  if (!evolutionUrl || !evolutionKey || !instanceName) {
+    console.warn('⚠️ EVOLUTION_API_URL, EVOLUTION_API_KEY ou EVOLUTION_INSTANCE_NAME não configurada, WhatsApp não enviado')
     return false
   }
 
@@ -222,8 +223,11 @@ export async function sendWhatsAppNotification(
 
 _Enviado por Taco Monitoring_`
 
-    // Chama a Evolution API
-    const response = await fetch(`${evolutionUrl}/message/sendText/${config.instanceName}`, {
+    // Chama a Evolution API (encode do nome da instância para URL)
+    const url = `${evolutionUrl}/message/sendText/${encodeURIComponent(instanceName)}`
+    console.log(`📱 Enviando WhatsApp para ${config.phone} via ${url}`)
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -237,7 +241,7 @@ _Enviado por Taco Monitoring_`
 
     if (!response.ok) {
       const errorData = await response.text()
-      console.error(`WhatsApp retornou status ${response.status}:`, errorData)
+      console.error(`❌ WhatsApp retornou status ${response.status}:`, errorData)
       return false
     }
 
@@ -255,7 +259,7 @@ export async function sendTelegramNotification(
   payload: NotificationPayload
 ): Promise<boolean> {
   const statusEmoji = payload.status === 'up' ? '✅' : payload.status === 'down' ? '🔴' : '⚠️'
-  const statusText = payload.status === 'up' ? 'Online' : payload.status === 'down' ? 'Offline' : 'Degradado'
+  const statusText = payload.status === 'up' ? 'Online' : payload.status === 'down' ? 'Offline' : payload.status === 'warning' ? 'Aviso' : 'Degradado'
 
   // Usa config do canal ou variável de ambiente
   const botToken = config.botToken || env.TELEGRAM_BOT_TOKEN
