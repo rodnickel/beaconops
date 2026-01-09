@@ -310,6 +310,8 @@ export interface Monitor {
   lastLatency?: number
   uptimePercentage?: number
   consecutiveFails?: number
+  // Grupo
+  groupId?: string | null
 }
 
 export interface MonitorListResponse {
@@ -335,6 +337,8 @@ export interface CreateMonitorData {
   followRedirects?: boolean
   requestBody?: string | null
   requestHeaders?: RequestHeader[] | null
+  // Grupo
+  groupId?: string | null
 }
 
 export interface UpdateMonitorData {
@@ -353,6 +357,8 @@ export interface UpdateMonitorData {
   followRedirects?: boolean
   requestBody?: string | null
   requestHeaders?: RequestHeader[] | null
+  // Grupo
+  groupId?: string | null
 }
 
 // ============================================

@@ -18,13 +18,14 @@ import type {
 
 export async function createMonitor(teamId: string, data: CreateMonitorInput) {
   // Converte requestHeaders para formato JSON aceito pelo Prisma
-  const { requestHeaders, escalationPolicyId, ...restData } = data
+  const { requestHeaders, escalationPolicyId, groupId, ...restData } = data
   const monitor = await prisma.monitor.create({
     data: {
       ...restData,
       teamId,
       requestHeaders: requestHeaders as object | undefined,
       escalationPolicyId: escalationPolicyId ?? null,
+      groupId: groupId ?? null,
     },
   })
 
@@ -83,14 +84,17 @@ export async function updateMonitor(
     return null
   }
 
-  // Converte requestHeaders e escalationPolicyId para formato Prisma
-  const { requestHeaders, escalationPolicyId, ...restData } = data
+  // Converte requestHeaders, escalationPolicyId e groupId para formato Prisma
+  const { requestHeaders, escalationPolicyId, groupId, ...restData } = data
   const updateData: Record<string, unknown> = { ...restData }
   if (requestHeaders !== undefined) {
     updateData.requestHeaders = requestHeaders as object | null
   }
   if (escalationPolicyId !== undefined) {
     updateData.escalationPolicyId = escalationPolicyId ?? null
+  }
+  if (groupId !== undefined) {
+    updateData.groupId = groupId ?? null
   }
 
   const monitor = await prisma.monitor.update({

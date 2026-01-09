@@ -67,6 +67,8 @@ export const createMonitorSchema = z.object({
   requestHeaders: z.array(requestHeaderSchema).max(20, 'Máximo de 20 headers').nullable().optional(),
   // Política de escalonamento
   escalationPolicyId: z.string().nullable().optional(),
+  // Grupo do monitor
+  groupId: z.string().nullable().optional(),
 })
 
 // Schema para atualizar um monitor
@@ -119,6 +121,8 @@ export interface MonitorWithStatus {
   createdAt: Date
   updatedAt: Date
   teamId: string
+  // Grupo
+  groupId: string | null
   // Status calculado
   currentStatus?: 'up' | 'down' | 'degraded' | 'unknown'
   lastCheck?: Date
